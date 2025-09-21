@@ -1,0 +1,132 @@
+<div class="room">
+    <header>
+        <div class="brand">APTITUDE <span>ARENA</span></div>
+        <div class="spacer"></div>
+        <div class="user">👤 {{ username }}</div>
+        <button class="logout" (click)="onLogout()">Logout</button>
+    </header>
+
+    <main>
+        <!-- Pre-room screen -->
+        <div *ngIf="!generatedCode" class="pre-room">
+            <div class="create-panel">
+                <h2>Forge Your Challenge!</h2>
+                <input type="text" [(ngModel)]="challengeName" placeholder="e.g. Brain Busters Arena" />
+                <label>Choose Domain</label>
+                <div class="domains">
+                    <button [class.active]="domain==='Verbal'" (click)="domain='Verbal'">Verbal</button>
+                    <button [class.active]="domain==='Logical'" (click)="domain='Logical'">Logical</button>
+                    <button [class.active]="domain==='Quant'" (click)="domain='Quant'">Quantitative Aptitude</button>
+                    <button [class.active]="domain==='Mixed'" (click)="domain='Mixed'">Mixed</button>
+                </div>
+                <label>Number of Questions</label>
+                <input type="number" min="1" max="50" [(ngModel)]="numQuestions" />
+                <label>Max Players</label>
+                <input type="number" min="2" max="20" [(ngModel)]="squadSize" />
+                <label>Time Limit per Question (seconds)</label>
+                <input type="number" min="10" max="120" [(ngModel)]="timeLimit" />
+                <button class="primary" (click)="createRoom()">Create Battleground!</button>
+            </div>
+
+            <div class="join-panel">
+                <h2>Leap into the Arena!</h2>
+                <p>Join with an invite code</p>
+                <input type="text" [(ngModel)]="roomCode" placeholder="Invite Code" />
+                <button class="success" (click)="joinRoom()">Join Room</button>
+            </div>
+        </div>
+
+        <!-- Lobby / quiz -->
+        <div *ngIf="generatedCode" class="lobby">
+            <div class="code-box">Invite Code: {{ generatedCode }}
+                <button class="logout" (click)="copyCode()">Copy</button>
+            </div>
+
+            <header class="settings-bar">
+                <div class="challenge-title" *ngIf="settings.challengeName">
+                    <h2>🏆 {{ settings.challengeName }}</h2>
+                </div>
+                <div class="summary">
+                    <div>Players: {{ players.length }} / {{ settings.maxPlayers || squadSize }}</div>
+                    <div>Questions: {{ settings.numQuestions }}</div>
+                    <div>Category: {{ settings.domain }}</div>
+                    <div>Time Limit: {{ settings.timeLimit }}s</div>
+                </div>
+                <div class="owner-controls" *ngIf="isOwner && !quizStarted">
+                    <button class="accent" (click)="startQuiz()" [disabled]="players.length < 1">Start Quiz!</button>
+                </div>
+            </header>
+
+            <main class="game-layout">
+                <aside class="players">
+                    <h3>🏆 Leaderboard</h3>
+                    <ul>
+                        <li *ngFor="let p of players; let i = index" [class.rank-1]="i === 0" [class.rank-2]="i === 1" [class.rank-3]="i === 2" [class.current-player]="p.username === username">
+                            <span class="rank-icon">{{ getRankIcon(i) }}</span>
+                            <span class="player-name">{{ p.username }}</span>
+                            <span class="score">{{ p.score || 0 }} pts</span>
+                        </li>
+                    </ul>
+                </aside>
+
+                <section class="whiteboard">
+                    <h2 *ngIf="!quizStarted && !showFinalResults">Waiting for host to start...</h2>
+
+                    <!-- Quiz Questions -->
+                    <div *ngIf="quizStarted && !showFinalResults" class="qcard">
+                        <div class="q-meta">
+                            <div>Q {{ currentQuestionIndex + 1 }} / {{ settings.numQuestions }}</div>
+                            <div class="timer" [class.warning]="timeLeftSeconds <= 10">⏱ {{ timeLeftSeconds }}s</div>
+                        </div>
+                        <h2 class="q">{{ currentQuestion }}</h2>
+                        <div class="opts">
+                            <button *ngFor="let opt of currentOptions; let i = index" (click)="chooseOption(opt)" [disabled]="hasAnswered" [class.answered]="hasAnswered" [class.selected]="currentAnswers[username] === i">
+                                {{ opt }}
+                            </button>
+                        </div>
+                        <div *ngIf="hasAnswered && waitingForOthers" class="waiting">
+                            <p>✅ Answer submitted! Waiting for other players...</p>
+                            <div class="answers-status">
+                                <div *ngFor="let player of players" class="player-status">
+                                    <span class="player-name">{{ player.username }}</span>
+                                    <span class="status-icon">{{ currentAnswers[player.username] !== undefined ? '✅' : '⏳' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Results -->
+                    <div *ngIf="showFinalResults" class="final-results">
+                        <div class="results-header">
+                            <h1>🎉 Quiz Complete!</h1>
+                            <p>Final Rankings</p>
+                        </div>
+                        <div class="podium">
+                            <div *ngFor="let player of players; let i = index" class="podium-item" [class.rank-1]="i === 0" [class.rank-2]="i === 1" [class.rank-3]="i === 2">
+                                <div class="rank-badge">{{ getRankIcon(i) }}</div>
+                                <div class="player-info">
+                                    <h3>{{ getRankText(i) }}</h3>
+                                    <p class="player-name">{{ player.username }}</p>
+                                    <p class="final-score">{{ player.score || 0 }} points</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="results-footer">
+                            <p>🏆 Congratulations to all participants!</p>
+                            <button class="play-again" (click)="showFinalResults = false">Play Again</button>
+                        </div>
+                    </div>
+                </section>
+
+                <aside class="chat">
+                    <h3>Chat</h3>
+                    <div class="messages">
+                        <div *ngFor="let msg of chat">{{ msg }}</div>
+                    </div>
+                    <input [(ngModel)]="newMessage" placeholder="Type your message..." />
+                    <button (click)="sendMessage()">Send</button>
+                </aside>
+            </main>
+        </div>
+    </main>
+</div>

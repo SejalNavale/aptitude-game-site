@@ -1,4 +1,32 @@
-<div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-xl shadow-lg">
-  <h1 class="text-3xl font-bold">Welcome to the Aptitude Gaming Zone</h1>
-  <p class="mt-2 text-lg">Test your skills and have fun!</p>
+<div *ngIf="!quizEnded && currentQuestion">
+    <h2>Question {{ currentQuestionIndex + 1 }}</h2>
+    <p>{{ currentQuestion.question }}</p>
+
+    <div class="options">
+        <button *ngFor="let option of currentQuestion.options; let i = index" (click)="chooseOption(i)" [disabled]="selectedAnswer !== null" [ngClass]="{ selected: selectedAnswer === i }">
+      {{ option }}
+    </button>
+    </div>
+
+    <p class="timer">⏳ {{ timeLeft }}s</p>
+</div>
+
+<div *ngIf="quizEnded">
+    <h2>🎉 Quiz Finished!</h2>
+    <h3>Final Scores</h3>
+    <ul>
+        <li *ngFor="let p of finalScores">{{ p.username }} - {{ p.score }}</li>
+    </ul>
+</div>
+
+<!-- ✅ Chat -->
+<div class="chat-box">
+    <h3>Chat</h3>
+    <div class="messages">
+        <div *ngFor="let msg of messages">
+            <strong>{{ msg.username }}:</strong> {{ msg.message }}
+        </div>
+    </div>
+    <input [(ngModel)]="newMessage" placeholder="Type message..." />
+    <button (click)="sendMessage()">Send</button>
 </div>

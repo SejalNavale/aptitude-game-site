@@ -1,0 +1,144 @@
+<div class="profile-page">
+    <header>
+        <div class="brand">APTITUDE <span>ARENA</span></div>
+        <div class="spacer"></div>
+        <div class="user">👤 {{ currentUser?.displayName || currentUser?.email || 'Player' }}</div>
+        <button class="logout" (click)="goBack()">Back to Dashboard</button>
+    </header>
+
+    <main>
+        <div class="profile-container">
+            <div class="profile-header">
+                <h1>👤 My Profile</h1>
+                <p>Manage your account settings and view your progress</p>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading profile...</p>
+            </div>
+
+            <!-- Error State -->
+            <div *ngIf="error" class="error">
+                <p>❌ {{ error }}</p>
+                <button (click)="loadProfile()">Try Again</button>
+            </div>
+
+            <!-- Profile Content -->
+            <div *ngIf="!loading && !error && profile" class="profile-content">
+                <!-- User Stats -->
+                <div class="stats-section">
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-info">
+                            <h3>{{ profile.totalScore }}</h3>
+                            <p>Total Score</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-info">
+                            <h3>{{ profile.gamesPlayed }}</h3>
+                            <p>Games Played</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3>{{ profile.averageScore }}</h3>
+                            <p>Average Score</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">{{ getRankIcon(profile.rank) }}</div>
+                        <div class="stat-info">
+                            <h3>{{ profile.rank }}</h3>
+                            <p>Global Rank</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Settings -->
+                <div class="settings-section">
+                    <h2>Account Settings</h2>
+
+                    <!-- Message Display -->
+                    <div *ngIf="message" class="message" [class.success]="message.includes('successfully')" [class.error]="!message.includes('successfully')">
+                        {{ message }}
+                    </div>
+
+                    <!-- Username Section -->
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Username</h3>
+                            <button *ngIf="!editingUsername" class="edit-btn" (click)="startEditingUsername()">Edit</button>
+                        </div>
+
+                        <div *ngIf="!editingUsername" class="setting-display">
+                            <span class="current-value">{{ profile.username }}</span>
+                        </div>
+
+                        <div *ngIf="editingUsername" class="setting-edit">
+                            <input type="text" [(ngModel)]="newUsername" placeholder="Enter new username" class="form-input">
+                            <div class="edit-actions">
+                                <button class="save-btn" (click)="saveUsername()" [disabled]="saving">
+                                    {{ saving ? 'Saving...' : 'Save' }}
+                                </button>
+                                <button class="cancel-btn" (click)="cancelEditingUsername()" [disabled]="saving">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Section -->
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Email</h3>
+                        </div>
+                        <div class="setting-display">
+                            <span class="current-value">{{ profile.email }}</span>
+                            <span class="readonly-note">(Cannot be changed)</span>
+                        </div>
+                    </div>
+
+                    <!-- Password Section -->
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Password</h3>
+                            <button *ngIf="!changingPassword" class="edit-btn" (click)="startChangingPassword()">Change</button>
+                        </div>
+
+                        <div *ngIf="!changingPassword" class="setting-display">
+                            <span class="current-value">••••••••</span>
+                        </div>
+
+                        <div *ngIf="changingPassword" class="setting-edit">
+                            <input type="password" [(ngModel)]="currentPassword" placeholder="Current password" class="form-input">
+                            <input type="password" [(ngModel)]="newPassword" placeholder="New password" class="form-input">
+                            <input type="password" [(ngModel)]="confirmPassword" placeholder="Confirm new password" class="form-input">
+                            <div class="edit-actions">
+                                <button class="save-btn" (click)="savePassword()" [disabled]="saving">
+                                    {{ saving ? 'Saving...' : 'Save' }}
+                                </button>
+                                <button class="cancel-btn" (click)="cancelChangingPassword()" [disabled]="saving">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account Info -->
+                    <div class="setting-group">
+                        <div class="setting-header">
+                            <h3>Account Information</h3>
+                        </div>
+                        <div class="account-info">
+                            <div class="info-item">
+                                <span class="info-label">Member since:</span>
+                                <span class="info-value">{{ profile.joinDate | date:'mediumDate' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>

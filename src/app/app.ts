@@ -1,3 +1,4 @@
+// src/app/app.component.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
@@ -5,10 +6,10 @@ import { RouterOutlet } from '@angular/router';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [RouterOutlet],
   template: `
     <div class="auth-screen">
-      <!-- All routed pages (splash, login, register, etc.) will load here -->
+      <!-- Routed pages (splash, login, room, quiz, etc.) will load here -->
       <router-outlet></router-outlet>
     </div>
   `,
@@ -31,4 +32,4 @@ import { RouterOutlet } from '@angular/router';
     }
   `]
 })
-export class App { }
+export class App {}
