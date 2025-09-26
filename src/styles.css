@@ -1,3 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&display=swap');
-html, body { margin:0; padding:0; background:#05060a; color:#e7fbff; }
-* { box-sizing: border-box; }
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&display=swap');
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #05060a;
+    color: #e7fbff;
+    font-family: 'Orbitron', system-ui, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: 'Orbitron', system-ui, sans-serif;
+}
+
+
+/* Theme hooks */
+
+[data-theme="light"] body {}
+
+[data-theme="dark"] {}
+
+[data-theme="neon"] {}

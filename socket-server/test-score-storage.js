@@ -65,3 +65,13 @@ async function testScoreStorage() {
 }
 
 testScoreStorage();
+
+
+
+
+
+
+
+
+
+

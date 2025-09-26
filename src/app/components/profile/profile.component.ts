@@ -88,23 +88,25 @@ export class ProfileComponent implements OnInit {
     this.saving = true;
     const currentUsername = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    this.http.put('http://localhost:5000/api/profile/username', {
-      currentUsername,
-      newUsername: this.newUsername.trim()
-    }).subscribe({
-      next: (response: any) => {
+    // Update display name in Firebase first, then reflect in backend scores
+    this.auth.updateDisplayName(this.newUsername.trim())
+      .then(() => this.http.put('http://localhost:5000/api/profile/username', {
+        currentUsername,
+        newUsername: this.newUsername.trim()
+      }).toPromise())
+      .then(() => {
+        this.currentUser = this.auth.currentUser;
         this.message = 'Username updated successfully!';
         this.editingUsername = false;
         this.saving = false;
-        this.loadProfile(); // Reload profile data
+        this.loadProfile();
         setTimeout(() => this.message = '', 3000);
-      },
-      error: (err) => {
+      })
+      .catch((err) => {
         console.error('Error updating username:', err);
-        this.message = 'Failed to update username';
+        this.message = err?.message || 'Failed to update username';
         this.saving = false;
-      }
-    });
+      });
   }
 
   startChangingPassword() {
@@ -140,14 +142,8 @@ export class ProfileComponent implements OnInit {
     }
 
     this.saving = true;
-    const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
-    
-    this.http.put('http://localhost:5000/api/profile/password', {
-      username,
-      currentPassword: this.currentPassword,
-      newPassword: this.newPassword
-    }).subscribe({
-      next: (response: any) => {
+    this.auth.changePassword(this.currentPassword, this.newPassword)
+      .then(() => {
         this.message = 'Password updated successfully!';
         this.changingPassword = false;
         this.saving = false;
@@ -155,13 +151,12 @@ export class ProfileComponent implements OnInit {
         this.newPassword = '';
         this.confirmPassword = '';
         setTimeout(() => this.message = '', 3000);
-      },
-      error: (err) => {
+      })
+      .catch((err) => {
         console.error('Error updating password:', err);
-        this.message = err.error?.message || 'Failed to update password';
+        this.message = err?.message || 'Failed to update password';
         this.saving = false;
-      }
-    });
+      });
   }
 
   goBack() {
@@ -179,3 +174,4 @@ export class ProfileComponent implements OnInit {
     return `#${rank}`;
   }
 }
+

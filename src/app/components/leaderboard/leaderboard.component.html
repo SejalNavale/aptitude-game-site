@@ -63,7 +63,7 @@
                         <div class="player-cell">
                             <div class="player-avatar">👤</div>
                             <div class="player-details">
-                                <h4>{{ player.username }}</h4>
+                                <h4>{{ player.username || player._id || 'Unknown' }}</h4>
                                 <span class="player-badge" *ngIf="i < 3">Top {{ i + 1 }}</span>
                             </div>
                         </div>

@@ -54,12 +54,15 @@ header {
 }
 
 .logout {
-    background: #ff5f5f;
+    background: linear-gradient(135deg, #00ffb3, #00c8ff);
     border: none;
-    color: #fff;
-    padding: 0.3rem 0.8rem;
-    border-radius: 10px;
+    color: #0b1020;
+    padding: 0.6rem 1.2rem;
+    border-radius: 22px;
     cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 12px rgba(0, 255, 200, 0.35);
+    font-weight: 800;
 }
 
 

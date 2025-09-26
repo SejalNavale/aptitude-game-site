@@ -153,3 +153,4 @@ The Angular app will run on `http://localhost:4200`
 - Modify time limits and scoring in the server configuration
 - Customize UI themes in the CSS files
 - Add new question domains by updating the domain options
+

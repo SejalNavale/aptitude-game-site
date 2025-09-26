@@ -38,6 +38,20 @@ const scoreSchema = new mongoose.Schema({
 });
 const Score = mongoose.model("Score", scoreSchema);
 
+// Persisted per-user app settings
+const settingsSchema = new mongoose.Schema({
+    username: { type: String, unique: true },
+    notifications: { type: Boolean, default: true },
+    soundEffects: { type: Boolean, default: true },
+    theme: { type: String, default: "dark" },
+    language: { type: String, default: "en" },
+    autoStart: { type: Boolean, default: false },
+    defaultTimeLimit: { type: Number, default: 20 },
+    defaultQuestions: { type: Number, default: 10 },
+    defaultDomain: { type: String, default: "Mixed" },
+});
+const UserSettings = mongoose.model("UserSettings", settingsSchema);
+
 // -------------------- Quiz Settings --------------------
 const DEFAULT_QUESTION_TIME = 20;
 const REVEAL_TIME = 3000;
@@ -53,7 +67,7 @@ io.on("connection", (socket) => {
             const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
 
             let questions = [];
-            const maxQuestions = Math.min(settings.numQuestions, 50); // Limit to 50 questions max
+            const maxQuestions = Math.min(settings.numQuestions, 50);
 
             console.log(`🎯 Fetching ${maxQuestions} questions for domain: ${settings.domain}`);
 
@@ -124,16 +138,15 @@ io.on("connection", (socket) => {
         if (!player || player.answer !== null) return;
 
         player.answer = Number(answer);
-        player.answerTime = room.timeLeft; // Store remaining time when answered
+        player.answerTime = room.timeLeft;
 
-        // Calculate score based on correctness and speed
         if (player.answer === room.questions[room.currentIndex].answer) {
-            const timeBonus = Math.floor((player.answerTime / room.settings.timeLimit) * 50); // Up to 50 bonus points
+            const timeBonus = Math.floor((player.answerTime / room.settings.timeLimit) * 50);
             const baseScore = 100;
             const totalScore = baseScore + timeBonus;
             player.score += totalScore;
 
-            console.log(`✅ ${username} answered correctly in ${player.answerTime}s: +${totalScore} points (${baseScore} base + ${timeBonus} time bonus)`);
+            console.log(`✅ ${username} answered correctly in ${player.answerTime}s: +${totalScore} points`);
         } else {
             console.log(`❌ ${username} answered incorrectly: 0 points`);
         }
@@ -218,7 +231,6 @@ function finishQuestion(roomCode) {
                         score: p.score,
                         domain: room.settings.domain,
                     };
-                    console.log(`💾 Saving score:`, scoreData);
                     await Score.create(scoreData);
                     console.log(`✅ Score saved for ${p.username}: ${p.score} points`);
                 } catch (err) {
@@ -226,7 +238,6 @@ function finishQuestion(roomCode) {
                 }
             }
 
-            // Clean up room after quiz ends
             delete rooms[roomCode];
         }
     }, REVEAL_TIME);
@@ -254,26 +265,30 @@ app.post("/api/score", async(req, res) => {
     }
 });
 
-// Leaderboard API
+// Leaderboard
 app.get("/api/leaderboard", async(req, res) => {
     try {
-        const leaderboard = await Score.aggregate([{
+        const leaderboardAgg = await Score.aggregate([{
                 $group: {
                     _id: "$username",
                     totalScore: { $sum: "$score" },
                     gamesPlayed: { $sum: 1 },
-                    averageScore: { $avg: "$score" }
-                }
+                    averageScore: { $avg: "$score" },
+                },
             },
-            {
-                $addFields: {
-                    averageScore: { $round: ["$averageScore", 0] }
-                }
-            },
-            {
-                $sort: { totalScore: -1 }
-            }
+            { $addFields: { averageScore: { $round: ["$averageScore", 0] } } },
+            { $sort: { totalScore: -1 } },
         ]);
+
+        const leaderboard = leaderboardAgg.map((u, idx) => ({
+            _id: u._id,
+            username: u._id,
+            totalScore: u.totalScore,
+            gamesPlayed: u.gamesPlayed,
+            averageScore: u.averageScore,
+            rank: idx + 1,
+        }));
+
         res.json(leaderboard);
     } catch (err) {
         console.error("Error fetching leaderboard:", err);
@@ -281,7 +296,7 @@ app.get("/api/leaderboard", async(req, res) => {
     }
 });
 
-// Profile API
+// Profile
 app.get("/api/profile/:username", async(req, res) => {
     try {
         const { username } = req.params;
@@ -292,14 +307,10 @@ app.get("/api/profile/:username", async(req, res) => {
                     _id: "$username",
                     totalScore: { $sum: "$score" },
                     gamesPlayed: { $sum: 1 },
-                    averageScore: { $avg: "$score" }
-                }
+                    averageScore: { $avg: "$score" },
+                },
             },
-            {
-                $addFields: {
-                    averageScore: { $round: ["$averageScore", 0] }
-                }
-            }
+            { $addFields: { averageScore: { $round: ["$averageScore", 0] } } },
         ]);
 
         if (userStats.length === 0) {
@@ -310,27 +321,28 @@ app.get("/api/profile/:username", async(req, res) => {
                 gamesPlayed: 0,
                 averageScore: 0,
                 rank: 0,
-                joinDate: new Date().toISOString()
+                joinDate: new Date().toISOString(),
             });
         }
 
-        // Get user's rank
-        const allUsers = await Score.aggregate([{
-                $group: {
-                    _id: "$username",
-                    totalScore: { $sum: "$score" }
-                }
-            },
-            { $sort: { totalScore: -1 } }
+        const allUsers = await Score.aggregate([
+            { $group: { _id: "$username", totalScore: { $sum: "$score" } } },
+            { $sort: { totalScore: -1 } },
         ]);
 
-        const userRank = allUsers.findIndex(user => user._id === username) + 1;
+        const userRank = allUsers.findIndex((user) => user._id === username) + 1;
 
-        res.json({
-            ...userStats[0],
+        const normalized = {
+            username: userStats[0]._id,
+            email: username,
+            totalScore: userStats[0].totalScore,
+            gamesPlayed: userStats[0].gamesPlayed,
+            averageScore: userStats[0].averageScore,
             rank: userRank,
-            joinDate: new Date().toISOString()
-        });
+            joinDate: new Date().toISOString(),
+        };
+
+        res.json(normalized);
     } catch (err) {
         console.error("Error fetching profile:", err);
         res.status(500).json({ error: "Failed to fetch profile" });
@@ -363,16 +375,12 @@ app.put("/api/profile/password", async(req, res) => {
 // Settings API
 app.get("/api/settings/:username", async(req, res) => {
     try {
-        res.json({
-            notifications: true,
-            soundEffects: true,
-            theme: 'dark',
-            language: 'en',
-            autoStart: false,
-            defaultTimeLimit: 20,
-            defaultQuestions: 10,
-            defaultDomain: 'Mixed'
-        });
+        const { username } = req.params;
+        let doc = await UserSettings.findOne({ username });
+        if (!doc) {
+            doc = await UserSettings.create({ username });
+        }
+        res.json(doc);
     } catch (err) {
         console.error("Error fetching settings:", err);
         res.status(500).json({ error: "Failed to fetch settings" });
@@ -382,7 +390,10 @@ app.get("/api/settings/:username", async(req, res) => {
 app.put("/api/settings", async(req, res) => {
     try {
         const { username, settings } = req.body;
-        res.json({ success: true });
+        if (!username || !settings) return res.status(400).json({ error: "Invalid payload" });
+        await UserSettings.updateOne({ username }, { $set: {...settings, username } }, { upsert: true });
+        const saved = await UserSettings.findOne({ username });
+        res.json({ success: true, settings: saved });
     } catch (err) {
         console.error("Error saving settings:", err);
         res.status(500).json({ error: "Failed to save settings" });

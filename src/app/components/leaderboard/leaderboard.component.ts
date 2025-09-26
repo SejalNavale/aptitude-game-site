@@ -41,7 +41,12 @@ export class LeaderboardComponent implements OnInit {
     this.http.get<UserScore[]>('http://localhost:5000/api/leaderboard')
       .subscribe({
         next: (data) => {
-          this.leaderboard = data;
+          // Ensure proper sort by rank if provided, otherwise by totalScore desc
+          const sorted = [...data].sort((a, b) => {
+            if (a.rank != null && b.rank != null) return a.rank - b.rank;
+            return (b.totalScore || 0) - (a.totalScore || 0);
+          });
+          this.leaderboard = sorted.map((u, idx) => ({ ...u, rank: u.rank ?? idx + 1 }));
           this.findCurrentUserRank();
           this.loading = false;
         },
@@ -55,8 +60,8 @@ export class LeaderboardComponent implements OnInit {
 
   findCurrentUserRank() {
     const currentUsername = this.currentUser?.displayName || this.currentUser?.email || 'Player';
-    const userIndex = this.leaderboard.findIndex(user => user.username === currentUsername);
-    this.currentUserRank = userIndex >= 0 ? userIndex + 1 : 0;
+    const found = this.leaderboard.find(user => user.username === currentUsername);
+    this.currentUserRank = found?.rank || 0;
   }
 
   getRankIcon(index: number): string {
@@ -85,3 +90,4 @@ export class LeaderboardComponent implements OnInit {
     this.loadLeaderboard();
   }
 }
+

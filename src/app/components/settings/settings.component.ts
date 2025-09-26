@@ -58,6 +58,8 @@ export class SettingsComponent implements OnInit {
         next: (data) => {
           this.settings = { ...this.settings, ...data };
           this.loading = false;
+          // apply theme immediately
+          this.applyTheme();
         },
         error: (err) => {
           console.error('Error loading settings:', err);
@@ -78,6 +80,7 @@ export class SettingsComponent implements OnInit {
       next: (response: any) => {
         this.message = 'Settings saved successfully!';
         this.saving = false;
+        this.applyTheme();
         setTimeout(() => this.message = '', 3000);
       },
       error: (err) => {
@@ -107,7 +110,12 @@ export class SettingsComponent implements OnInit {
   }
 
   onThemeChange() {
-    // Apply theme change immediately
-    document.body.className = this.settings.theme;
+    this.applyTheme();
+  }
+
+  private applyTheme() {
+    const theme = this.settings.theme || 'dark';
+    document.body.setAttribute('data-theme', theme);
   }
 }
+
