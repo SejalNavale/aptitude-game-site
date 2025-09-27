@@ -44,14 +44,14 @@ cd socket-server
 npm start
 ```
 
-The server will run on `http://localhost:5000`
+The server will run on `http://quizrush-9.onrender.com`
 
 ### 5. Start the Frontend
 ```bash
 ng serve
 ```
 
-The Angular app will run on `http://localhost:4200`
+The Angular app will run on `quizrush-9.onrender.com`
 
 ## Features Implemented
 

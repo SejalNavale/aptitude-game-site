@@ -38,7 +38,7 @@ export class LeaderboardComponent implements OnInit {
 
   loadLeaderboard() {
     this.loading = true;
-    this.http.get<UserScore[]>('http://localhost:5000/api/leaderboard')
+    this.http.get<UserScore[]>('http://quizrush-9.onrender.com/api/leaderboard')
       .subscribe({
         next: (data) => {
           // Ensure proper sort by rank if provided, otherwise by totalScore desc

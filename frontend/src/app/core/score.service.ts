@@ -6,6 +6,6 @@ export class ScoreService {
   constructor(private http: HttpClient) {}
 
   saveScore(username: string, score: number) {
-    return this.http.post('http://localhost:5000/api/score', { username, score }).toPromise();
+    return this.http.post('http://quizrush-9.onrender.com/api/score', { username, score }).toPromise();
   }
 }

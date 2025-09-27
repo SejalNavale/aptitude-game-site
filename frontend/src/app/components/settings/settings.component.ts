@@ -53,7 +53,7 @@ export class SettingsComponent implements OnInit {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    this.http.get<AppSettings>(`http://localhost:5000/api/settings/${encodeURIComponent(username)}`)
+    this.http.get<AppSettings>(`http://:5000quizrush-9.onrender.com/api/settings/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.settings = { ...this.settings, ...data };
@@ -73,7 +73,7 @@ export class SettingsComponent implements OnInit {
     this.saving = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    this.http.put('http://localhost:5000/api/settings', {
+    this.http.put('http://quizrush-9.onrender.com/api/settings', {
       username,
       settings: this.settings
     }).subscribe({

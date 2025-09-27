@@ -12,7 +12,8 @@ export interface QuizQuestion {
 @Injectable({ providedIn: 'root' })
 export class QuizService {
   private http = inject(HttpClient);
-  private baseUrl = 'http://localhost:5000/api';
+  private baseUrl = 'https://quizrush-9.onrender.com/api';
+
 
   async getQuestions(domain: string, numQuestions: number): Promise<QuizQuestion[]> {
   return await firstValueFrom(

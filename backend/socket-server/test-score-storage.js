@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/quizApp');
+mongoose.connect('mongodb+srv://ayushshirke123_db_user:IIT_project@quizappcluster.hnwrp1w.mongodb.net/quizrush?retryWrites=true&w=majority&appName=QuizAppCluster');
 
 // Define schema
 const scoreSchema = new mongoose.Schema({
