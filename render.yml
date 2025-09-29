@@ -4,8 +4,8 @@ services:
     name: quiz-frontend
     env: static
     rootDir: .
-    buildCommand: "npm install && npm run build --prod"
-    staticPublishPath: "dist/<your-app-name>"   # replace <your-app-name> with folder name in dist
+    buildCommand: "npm install && npm run build --configuration production"
+    staticPublishPath: "dist/aptitude-game-site"
     envVars:
       - key: NODE_VERSION
         value: 18
@@ -16,11 +16,11 @@ services:
     env: node
     rootDir: socket-server
     buildCommand: "npm install"
-    startCommand: "node server.js"   # or "npm start" if your socket-server/package.json defines it
+    startCommand: "node server.js"   # change to "npm start" if your package.json has start script
     envVars:
       - key: NODE_VERSION
         value: 18
-      # Add Firebase credentials here
+      # Firebase credentials here
       - key: FIREBASE_API_KEY
         value: your_api_key
       - key: FIREBASE_PROJECT_ID
