@@ -1,0 +1,27 @@
+services:
+  # Frontend (Angular App)
+  - type: web
+    name: quiz-frontend
+    env: static
+    rootDir: .
+    buildCommand: "npm install && npm run build --prod"
+    staticPublishPath: "dist/<your-app-name>"   # replace <your-app-name> with folder name in dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+
+  # Backend (Node.js Socket Server)
+  - type: web
+    name: quiz-backend
+    env: node
+    rootDir: socket-server
+    buildCommand: "npm install"
+    startCommand: "node server.js"   # or "npm start" if your socket-server/package.json defines it
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      # Add Firebase credentials here
+      - key: FIREBASE_API_KEY
+        value: your_api_key
+      - key: FIREBASE_PROJECT_ID
+        value: your_project_id

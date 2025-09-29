@@ -1,0 +1,29 @@
+<div class="dash">
+    <header>
+        <div class="brand">APTITUDE <span>ARENA</span></div>
+        <div class="spacer"></div>
+        <div class="user">👤 {{ displayName() }}</div>
+        <button class="logout" (click)="onLogout()">Logout</button>
+    </header>
+
+    <main>
+        <div class="grid">
+            <button class="tile" (click)="open('quiz')">
+        <div class="t">Start Quiz</div>
+        <p>Sharpen logic, speed, accuracy.</p>
+      </button>
+            <button class="tile" (click)="open('leaderboard')">
+        <div class="t">Leaderboard</div>
+        <p>Compete with the best.</p>
+      </button>
+            <button class="tile" (click)="open('profile')">
+        <div class="t">Profile</div>
+        <p>Track your progress.</p>
+      </button>
+            <button class="tile" (click)="open('settings')">
+        <div class="t">Settings</div>
+        <p>Tune your arena.</p>
+      </button>
+        </div>
+    </main>
+</div>

@@ -1,0 +1,97 @@
+<div class="leaderboard-page">
+    <header>
+        <div class="brand">APTITUDE <span>ARENA</span></div>
+        <div class="spacer"></div>
+        <div class="user">👤 {{ currentUser?.displayName || currentUser?.email || 'Player' }}</div>
+        <button class="logout" (click)="goBack()">Back to Dashboard</button>
+    </header>
+
+    <main>
+        <div class="leaderboard-container">
+            <div class="header-section">
+                <h1>🏆 Global Leaderboard</h1>
+                <p>Compete with players worldwide and climb the ranks!</p>
+                <button class="refresh-btn" (click)="refresh()" [disabled]="loading">
+                    {{ loading ? 'Loading...' : '🔄 Refresh' }}
+                </button>
+            </div>
+
+            <!-- Current User Rank -->
+            <div class="current-user-rank" *ngIf="currentUserRank > 0">
+                <div class="rank-card current-user">
+                    <div class="rank-info">
+                        <span class="rank-number">#{{ currentUserRank }}</span>
+                        <span class="rank-label">Your Rank</span>
+                    </div>
+                    <div class="user-info">
+                        <h3>{{ currentUser?.displayName || currentUser?.email || 'Player' }}</h3>
+                        <p>Keep playing to improve your rank!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading leaderboard...</p>
+            </div>
+
+            <!-- Error State -->
+            <div *ngIf="error" class="error">
+                <p>❌ {{ error }}</p>
+                <button (click)="refresh()">Try Again</button>
+            </div>
+
+            <!-- Leaderboard -->
+            <div *ngIf="!loading && !error" class="leaderboard">
+                <div class="leaderboard-header">
+                    <div class="rank-col">Rank</div>
+                    <div class="player-col">Player</div>
+                    <div class="score-col">Total Score</div>
+                    <div class="games-col">Games</div>
+                    <div class="avg-col">Average</div>
+                </div>
+
+                <div class="leaderboard-list">
+                    <div *ngFor="let player of leaderboard; let i = index" class="player-row" [class.rank-1]="i === 0" [class.rank-2]="i === 1" [class.rank-3]="i === 2" [class.current-user-row]="player.username === (currentUser?.displayName || currentUser?.email)">
+
+                        <div class="rank-cell">
+                            <span class="rank-icon">{{ getRankIcon(i) }}</span>
+                            <span class="rank-text">{{ getRankText(i) }}</span>
+                        </div>
+
+                        <div class="player-cell">
+                            <div class="player-avatar">👤</div>
+                            <div class="player-details">
+                                <h4>{{ player.username || player._id || 'Unknown' }}</h4>
+                                <span class="player-badge" *ngIf="i < 3">Top {{ i + 1 }}</span>
+                            </div>
+                        </div>
+
+                        <div class="score-cell">
+                            <span class="score-value">{{ player.totalScore }}</span>
+                            <span class="score-label">points</span>
+                        </div>
+
+                        <div class="games-cell">
+                            <span class="games-value">{{ player.gamesPlayed }}</span>
+                            <span class="games-label">games</span>
+                        </div>
+
+                        <div class="avg-cell">
+                            <span class="avg-value">{{ player.averageScore }}</span>
+                            <span class="avg-label">avg</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="!loading && !error && leaderboard.length === 0" class="empty-state">
+                <h3>🎯 No Players Yet</h3>
+                <p>Be the first to play and claim the top spot!</p>
+                <button class="play-btn" (click)="goBack()">Start Playing</button>
+            </div>
+        </div>
+    </main>
+</div>
