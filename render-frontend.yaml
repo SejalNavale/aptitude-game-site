@@ -1,0 +1,12 @@
+services:
+  - type: static
+    name: aptitude-game-frontend-fresh
+    buildCommand: |
+      npm install
+      ng build --configuration production
+    staticPublishPath: dist/aptitude-game-site/browser
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: FORCE_REBUILD
+        value: "true"
