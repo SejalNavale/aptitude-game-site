@@ -23,7 +23,8 @@ const io = new Server(httpServer, {
 
 // -------------------- MongoDB Connection --------------------
 mongoose
-    .connect("mongodb://localhost:27017/quizApp")
+    .connect("mongodb+srv://ayushshirke123_db_user:IIT_project@quizappcluster.hnwrp1w.mongodb.net/IIT_project?retryWrites=true&w=majority&appName=QuizAppCluster")
+
     .then(() => console.log("✅ MongoDB connected"))
     .catch((err) => console.error("❌ MongoDB error:", err));
 
