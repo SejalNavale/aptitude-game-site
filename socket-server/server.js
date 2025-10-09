@@ -10,6 +10,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use("/",(req,res)=>{
+    res.send("sever start")
+    console.log("server is running..");
+    
+})
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: { origin: ["http://localhost:4200"], methods: ["GET", "POST"] },
