@@ -8,11 +8,7 @@ const cors = require("cors");
 // -------------------- App Setup --------------------
 const app = express();
 app.use(cors({
-  origin: [
-    "http://localhost:4200",
-    "https://aptitude-game-site.onrender.com", // ✅ Your actual frontend URL
-    "https://aptitude-game-frontend.onrender.com"
-  ],
+  origin: "*", // Allow all origins temporarily for testing
   methods: ["GET", "POST", "PUT"],
   credentials: true
 }));
@@ -77,11 +73,7 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      "http://localhost:4200",
-      "https://aptitude-game-site.onrender.com", // ✅ Your actual frontend URL
-      "https://aptitude-game-frontend.onrender.com"
-    ],
+    origin: "*", // Allow all origins temporarily for testing
     methods: ["GET", "POST"]
   }
 });
