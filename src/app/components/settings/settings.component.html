@@ -1,0 +1,143 @@
+<div class="settings-page">
+    <header>
+        <div class="brand">APTITUDE <span>ARENA</span></div>
+        <div class="spacer"></div>
+        <div class="user">👤 {{ currentUser?.displayName || currentUser?.email || 'Player' }}</div>
+        <button class="logout" (click)="goBack()">Back to Dashboard</button>
+    </header>
+
+    <main>
+        <div class="settings-container">
+            <div class="settings-header">
+                <h1>⚙️ Settings</h1>
+                <p>Customize your quiz experience and preferences</p>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading settings...</p>
+            </div>
+
+            <!-- Settings Content -->
+            <div *ngIf="!loading" class="settings-content">
+                <!-- Message Display -->
+                <div *ngIf="message" class="message" [class.success]="message.includes('successfully')" [class.error]="!message.includes('successfully')">
+                    {{ message }}
+                </div>
+
+                <!-- General Settings -->
+                <div class="settings-section">
+                    <h2>🎮 General Settings</h2>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Notifications</h3>
+                            <p>Receive notifications for quiz updates and results</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" [(ngModel)]="settings.notifications">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Sound Effects</h3>
+                            <p>Play sound effects during quiz gameplay</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" [(ngModel)]="settings.soundEffects">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Auto Start</h3>
+                            <p>Automatically start quiz when all players join</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" [(ngModel)]="settings.autoStart">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Appearance Settings -->
+                <div class="settings-section">
+                    <h2>🎨 Appearance</h2>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Theme</h3>
+                            <p>Choose your preferred color theme</p>
+                        </div>
+                        <select [(ngModel)]="settings.theme" (change)="onThemeChange()" class="setting-select">
+                            <option value="dark">Dark Theme</option>
+                            <option value="light">Light Theme</option>
+                            <option value="neon">Neon Theme</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Language</h3>
+                            <p>Select your preferred language</p>
+                        </div>
+                        <select [(ngModel)]="settings.language" class="setting-select">
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quiz Defaults -->
+                <div class="settings-section">
+                    <h2>🎯 Quiz Defaults</h2>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Default Time Limit</h3>
+                            <p>Default time per question (in seconds)</p>
+                        </div>
+                        <input type="number" [(ngModel)]="settings.defaultTimeLimit" min="10" max="120" class="setting-input">
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Default Questions</h3>
+                            <p>Default number of questions per quiz</p>
+                        </div>
+                        <input type="number" [(ngModel)]="settings.defaultQuestions" min="5" max="50" class="setting-input">
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <h3>Default Domain</h3>
+                            <p>Default question category</p>
+                        </div>
+                        <select [(ngModel)]="settings.defaultDomain" class="setting-select">
+                            <option value="Mixed">Mixed</option>
+                            <option value="Verbal">Verbal</option>
+                            <option value="Logical">Logical</option>
+                            <option value="Quant">Quantitative</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="settings-actions">
+                    <button class="save-btn" (click)="saveSettings()" [disabled]="saving">
+                        {{ saving ? 'Saving...' : '💾 Save Settings' }}
+                    </button>
+                    <button class="reset-btn" (click)="resetToDefaults()" [disabled]="saving">
+                        🔄 Reset to Defaults
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
