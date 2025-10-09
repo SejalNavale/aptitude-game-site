@@ -54,7 +54,7 @@ export class RoomComponent implements OnInit, OnDestroy {
     const u = this.auth.currentUser;
     this.username = (u?.displayName || u?.email || 'Player') as string;
     // Load saved defaults for quiz settings
-    this.http.get<any>(`http://localhost:5000/api/settings/${encodeURIComponent(this.username)}`)
+    this.http.get<any>(`https://aptitude-game-site-backend.onrender.com/api/settings/${encodeURIComponent(this.username)}`)
       .subscribe({
         next: (s) => {
           if (s) {
@@ -66,7 +66,7 @@ export class RoomComponent implements OnInit, OnDestroy {
         },
         error: () => {}
       });
-    this.socket = io('http://localhost:5000', { transports: ['websocket', 'polling'] });
+    this.socket = io('https://aptitude-game-site-backend.onrender.com/', { transports: ['websocket', 'polling'] });
     this.socket.on('connect_error', (err: any) => {
       console.error('Socket connect_error:', err?.message || err);
       alert('Cannot connect to game server. Please ensure it is running.');
@@ -276,7 +276,7 @@ export class RoomComponent implements OnInit, OnDestroy {
   }
 
   submitScore(score: number) {
-    this.http.post('http://localhost:8080/api/score', { username: this.username, score })
+    this.http.post('https://aptitude-game-site-backend.onrender.com/api/score', { username: this.username, score })
       .subscribe(res => console.log('score saved', res), err => console.error(err));
   }
 
