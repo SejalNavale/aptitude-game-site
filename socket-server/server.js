@@ -10,12 +10,20 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:4200",
-    "https://aptitude-game-frontend.onrender.com" // ✅ Render frontend
+    "https://aptitude-game-site.onrender.com", // ✅ Your actual frontend URL
+    "https://aptitude-game-frontend.onrender.com"
   ],
   methods: ["GET", "POST", "PUT"],
   credentials: true
 }));
 app.use(express.json());
+
+// Add additional CORS headers to fix Cross-Origin-Opener-Policy issues
+app.use((req, res, next) => {
+  res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  next();
+});
 
 // Root endpoint
 app.use("/", (req, res) => {
@@ -71,6 +79,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: [
       "http://localhost:4200",
+      "https://aptitude-game-site.onrender.com", // ✅ Your actual frontend URL
       "https://aptitude-game-frontend.onrender.com"
     ],
     methods: ["GET", "POST"]
