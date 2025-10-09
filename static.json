@@ -1,0 +1,6 @@
+{
+  "root": "dist/aptitude-game-site",
+  "routes": {
+    "/**": "index.html"
+  }
+}
