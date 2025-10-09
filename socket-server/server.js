@@ -10,7 +10,7 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:4200",
-    "https://aptitude-game-site.onrender.com" // ✅ Render frontend
+    "https://aptitude-game-frontend.onrender.com" // ✅ Render frontend
   ],
   methods: ["GET", "POST", "PUT"],
   credentials: true
@@ -71,7 +71,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: [
       "http://localhost:4200",
-      "https://aptitude-game-site.onrender.com"
+      "https://aptitude-game-frontend.onrender.com"
     ],
     methods: ["GET", "POST"]
   }
