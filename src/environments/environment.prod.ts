@@ -1,4 +1,4 @@
-// Updated: 2024 - Fixed backend URL
+// Updated: 2024-12-19 - Fixed backend URL to aptitude-game-backend1.onrender.com
 export const environment = {
   production: true,
   apiUrl: 'https://aptitude-game-backend1.onrender.com',
