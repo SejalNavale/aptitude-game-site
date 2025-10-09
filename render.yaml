@@ -1,0 +1,20 @@
+services:
+  # Backend Service
+  - type: web
+    name: aptitude-game-backend
+    env: node
+    plan: free
+    buildCommand: cd socket-server && npm install
+    startCommand: cd socket-server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # Frontend Service  
+  - type: static
+    name: aptitude-game-frontend
+    buildCommand: npm install && ng build --configuration production
+    staticPublishPath: dist/aptitude-game-site/browser
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x

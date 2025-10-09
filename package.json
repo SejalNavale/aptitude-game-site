@@ -5,8 +5,10 @@
         "ng": "ng",
         "start": "ng serve",
         "build": "ng build",
+        "build:prod": "ng build --configuration production",
         "watch": "ng build --watch --configuration development",
-        "test": "ng test"
+        "test": "ng test",
+        "deploy": "npm run build:prod && echo 'Frontend built successfully! Deploy dist/aptitude-game-site/ to your hosting service.'"
     },
     "prettier": {
         "overrides": [
