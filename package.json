@@ -8,7 +8,9 @@
         "build:prod": "ng build --configuration production",
         "watch": "ng build --watch --configuration development",
         "test": "ng test",
-        "deploy": "npm run build:prod && echo 'Frontend built successfully! Deploy dist/aptitude-game-site/ to your hosting service.'"
+        "deploy": "npm run build:prod && echo 'Frontend built successfully! Deploy dist/aptitude-game-site/ to your hosting service.'",
+        "deploy:vercel": "npm run build:prod && vercel --prod",
+        "deploy:netlify": "npm run build:prod && netlify deploy --prod --dir=dist/aptitude-game-site"
     },
     "prettier": {
         "overrides": [
