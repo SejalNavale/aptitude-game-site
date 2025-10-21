@@ -74,8 +74,11 @@ let rooms = {};
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
-  cors: {
-    origin: "http://localhost:4200", // only local Angular frontend
+   cors: {
+    origin: [
+      "http://localhost:4200",
+      "https://aptitude-game-site.onrender.com"
+    ],
     methods: ["GET", "POST", "PUT"],
     credentials: true
   }
