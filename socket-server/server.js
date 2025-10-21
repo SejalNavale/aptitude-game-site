@@ -74,15 +74,15 @@ let rooms = {};
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
-   cors: {
-    origin: [
-      "http://localhost:4200",
-      "https://aptitude-game-site.onrender.com"
-    ],
-    methods: ["GET", "POST", "PUT"],
+  cors: {
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://aptitude-game-site.onrender.com']  // ✅ your frontend on Render
+      : ['http://localhost:4200'],                   // ✅ local dev
+    methods: ['GET', 'POST', 'PUT'],
     credentials: true
   }
 });
+
 
 // -------------------- Socket.io Events --------------------
 io.on("connection", (socket) => {

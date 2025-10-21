@@ -72,15 +72,16 @@ export class RoomComponent implements OnInit, OnDestroy {
       error: () => {}
     });
 
-    // ✅ Connect Socket.IO using environment.socketUrl
     this.socket = io(environment.socketUrl, {
-      transports: ['polling', 'websocket'], // polling first to allow initial handshake
-      timeout: 20000,
-      forceNew: true,
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
-    });
+  path: '/socket.io',
+  transports: ['polling', 'websocket'],
+  timeout: 20000,
+  forceNew: true,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000
+});
+
 
     this.socket.on('connect_error', (err: any) => {
       console.error('Socket connect_error:', err?.message || err);
