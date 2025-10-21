@@ -4,8 +4,8 @@ services:
     name: aptitude-game-backend
     env: node
     plan: free
-    buildCommand: cd socket-server && npm install
-    startCommand: cd socket-server && npm start
+    buildCommand: cd aptitude-game-site-main/socket-server && npm install
+    startCommand: cd aptitude-game-site-main/socket-server && npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,8 +21,8 @@ services:
     name: aptitude-game-frontend
     env: static
     plan: free
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist/aptitude-game-site
+    buildCommand: cd aptitude-game-site-main && npm install && npm run build
+    staticPublishPath: ./aptitude-game-site-main/dist/aptitude-game-site
     envVars:
       - key: NODE_ENV
         value: production

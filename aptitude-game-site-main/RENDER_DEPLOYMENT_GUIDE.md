@@ -18,8 +18,8 @@ This guide will help you deploy both the frontend and backend of the Aptitude Ga
 4. Configure the service:
    - **Name**: `aptitude-game-backend`
    - **Environment**: `Node`
-   - **Build Command**: `cd socket-server && npm install`
-   - **Start Command**: `cd socket-server && npm start`
+   - **Build Command**: `cd aptitude-game-site-main/socket-server && npm install`
+   - **Start Command**: `cd aptitude-game-site-main/socket-server && npm start`
    - **Plan**: Free
 
 ### Step 2: Environment Variables
@@ -46,8 +46,8 @@ Click "Create Web Service" and wait for deployment to complete.
 3. Connect your GitHub repository: `https://github.com/SejalNavale/aptitude-game-site.git`
 4. Configure the service:
    - **Name**: `aptitude-game-frontend`
-   - **Build Command**: `npm install && npm run build`
-   - **Publish Directory**: `dist/aptitude-game-site`
+   - **Build Command**: `cd aptitude-game-site-main && npm install && npm run build`
+   - **Publish Directory**: `aptitude-game-site-main/dist/aptitude-game-site`
    - **Plan**: Free
 
 ### Step 2: Environment Variables
