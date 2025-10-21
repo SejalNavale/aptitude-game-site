@@ -1,0 +1,15 @@
+{
+  "/api": {
+    "target": "https://aptitude-game-backend.onrender.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/socket.io": {
+    "target": "https://aptitude-game-backend.onrender.com",
+    "ws": true,
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

@@ -1,0 +1,39 @@
+.options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+button {
+    padding: 10px;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button.selected {
+    background-color: #fbbc05;
+}
+
+.timer {
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+
+/* ✅ Chat styles */
+
+.chat-box {
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    max-width: 300px;
+}
+
+.messages {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 5px;
+    margin-bottom: 10px;
+}

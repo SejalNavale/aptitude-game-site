@@ -1,0 +1,33 @@
+services:
+  # Backend Service (Socket Server)
+  - type: web
+    name: aptitude-game-backend
+    env: node
+    plan: free
+    buildCommand: cd aptitude-game-site-main/socket-server && npm install
+    startCommand: cd aptitude-game-site-main/socket-server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: aptitude-game-db
+          property: connectionString
+
+  # Frontend Service (Angular App)
+  - type: web
+    name: aptitude-game-frontend
+    env: static
+    plan: free
+    buildCommand: cd aptitude-game-site-main && npm install && npm run build
+    staticPublishPath: ./aptitude-game-site-main/dist/aptitude-game-site
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: aptitude-game-db
+    plan: free
+    databaseName: aptitude_game_db
