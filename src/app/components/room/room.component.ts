@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { io, Socket } from 'socket.io-client';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
+import { environment } from '../../../environments/environment';
+
 
 const API_URL = '/api'; // proxy-friendly
 
@@ -70,8 +72,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       error: () => {}
     });
 
-    // ✅ Connect Socket.IO via proxy (CORS safe)
-    this.socket = io('', {
+    // ✅ Connect Socket.IO using environment.socketUrl
+    this.socket = io(environment.socketUrl, {
       transports: ['polling', 'websocket'], // polling first to allow initial handshake
       timeout: 20000,
       forceNew: true,

@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000;
 
 // Configure CORS for production and development
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [process.env.FRONTEND_URL || 'https://aptitude-game-frontend.onrender.com']
+  ? ['https://aptitude-game-site.onrender.com']  // your deployed frontend URL
   : ['http://localhost:4200'];
 
 app.use(cors({
