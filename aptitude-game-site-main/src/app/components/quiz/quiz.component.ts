@@ -29,7 +29,8 @@ export class QuizComponent implements OnInit, OnDestroy {
   constructor(private ngZone: NgZone) {}
 
   ngOnInit(): void {
-    this.socket = io('https://aptitude-game-site-backend.onrender.com/');
+    // ✅ Use proxy path for Socket.io connection
+    this.socket = io('/');
 
     // Join Room
     this.socket.emit('joinRoom', { roomCode: this.roomCode, username: this.username }, (res: any) => {

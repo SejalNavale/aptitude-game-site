@@ -8,17 +8,14 @@ const cors = require("cors");
 // -------------------- App Setup --------------------
 const app = express();
 app.use(cors({
-  origin: [
-    "http://localhost:4200",
-    "https://aptitude-game-site.onrender.com" // ✅ Render frontend
-  ],
+  origin: "http://localhost:4200", // only local Angular frontend
   methods: ["GET", "POST", "PUT"],
   credentials: true
 }));
 app.use(express.json());
 
 // Root endpoint
-app.use("/", (req, res) => {
+app.get("/", (req, res) => {
   res.send("✅ Server started successfully!");
   console.log("Server is running...");
 });
@@ -69,11 +66,9 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      "http://localhost:4200",
-      "https://aptitude-game-site.onrender.com"
-    ],
-    methods: ["GET", "POST"]
+    origin: "http://localhost:4200", // only local Angular frontend
+    methods: ["GET", "POST", "PUT"],
+    credentials: true
   }
 });
 
@@ -88,15 +83,11 @@ io.on("connection", (socket) => {
       const maxQuestions = Math.min(settings.numQuestions, 50);
       let questions = [];
 
-      console.log(`🎯 Fetching ${maxQuestions} questions for domain: ${settings.domain}`);
-
       if (settings.domain === "Mixed") {
         questions = await Question.aggregate([{ $sample: { size: maxQuestions } }]);
       } else {
         questions = await Question.find({ domain: settings.domain }).limit(maxQuestions);
       }
-
-      console.log(`📚 Found ${questions.length} questions in database`);
 
       rooms[roomCode] = {
         roomCode,
@@ -118,7 +109,6 @@ io.on("connection", (socket) => {
       socket.join(roomCode);
       callback?.({ success: true, roomCode, settings: rooms[roomCode].settings });
       io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
-      console.log(`🎮 Room ${roomCode} created by ${username}`);
     } catch (err) {
       console.error("❌ Error creating room:", err);
       callback?.({ success: false, message: "Error creating room" });
@@ -163,9 +153,6 @@ io.on("connection", (socket) => {
       const timeBonus = Math.floor((player.answerTime / room.settings.timeLimit) * 50);
       const totalScore = 100 + timeBonus;
       player.score += totalScore;
-      console.log(`✅ ${username} answered correctly: +${totalScore} points`);
-    } else {
-      console.log(`❌ ${username} answered incorrectly`);
     }
 
     io.to(roomCode).emit("answerSubmitted", {
@@ -195,6 +182,12 @@ function sendQuestion(roomCode) {
   if (!room) return;
 
   const q = room.questions[room.currentIndex];
+  if (!q) {
+    console.error(`❌ No question found at index ${room.currentIndex} for room ${roomCode}`);
+    io.to(roomCode).emit("error", { message: "No questions available" });
+    return;
+  }
+
   room.players.forEach((p) => (p.answer = null));
   room.timeLeft = room.settings.timeLimit;
 
@@ -236,7 +229,6 @@ async function finishQuestion(roomCode) {
       sendQuestion(roomCode);
     } else {
       io.to(roomCode).emit("quizFinished", { finalScores: room.players });
-      console.log(`💾 Saving scores for ${room.players.length} players`);
       for (const p of room.players) {
         try {
           await Score.create({
@@ -244,7 +236,6 @@ async function finishQuestion(roomCode) {
             score: p.score,
             domain: room.settings.domain,
           });
-          console.log(`✅ Score saved for ${p.username}: ${p.score}`);
         } catch (err) {
           console.error("❌ Error saving score:", err);
         }
@@ -255,6 +246,7 @@ async function finishQuestion(roomCode) {
 }
 
 // -------------------- REST APIs --------------------
+// Questions API
 app.get("/api/questions", async (req, res) => {
   const { domain, limit } = req.query;
   const filter = domain && domain !== "Mixed" ? { domain } : {};
@@ -266,7 +258,31 @@ app.get("/api/questions", async (req, res) => {
   }
 });
 
-// Leaderboard app.get("/api/leaderboard", async(req, res) => { try { const leaderboardAgg = await Score.aggregate([{ $group: { _id: "$username", totalScore: { $sum: "$score" }, gamesPlayed: { $sum: 1 }, averageScore: { $avg: "$score" }, }, }, { $addFields: { averageScore: { $round: ["$averageScore", 0] } } }, { $sort: { totalScore: -1 } }, ]); const leaderboard = leaderboardAgg.map((u, idx) => ({ _id: u._id, username: u._id, totalScore: u.totalScore, gamesPlayed: u.gamesPlayed, averageScore: u.averageScore, rank: idx + 1, })); res.json(leaderboard); } catch (err) { console.error("Error fetching leaderboard:", err); res.status(500).json([]); } }); // Profile app.get("/api/profile/:username", async(req, res) => { try { const { username } = req.params; const userStats = await Score.aggregate([ { $match: { username } }, { $group: { _id: "$username", totalScore: { $sum: "$score" }, gamesPlayed: { $sum: 1 }, averageScore: { $avg: "$score" }, }, }, { $addFields: { averageScore: { $round: ["$averageScore", 0] } } }, ]); if (userStats.length === 0) { return res.json({ username, email: username, totalScore: 0, gamesPlayed: 0, averageScore: 0, rank: 0, joinDate: new Date().toISOString(), }); } const allUsers = await Score.aggregate([ { $group: { _id: "$username", totalScore: { $sum: "$score" } } }, { $sort: { totalScore: -1 } }, ]); const userRank = allUsers.findIndex((user) => user._id === username) + 1; const normalized = { username: userStats[0]._id, email: username, totalScore: userStats[0].totalScore, gamesPlayed: userStats[0].gamesPlayed, averageScore: userStats[0].averageScore, rank: userRank, joinDate: new Date().toISOString(), }; res.json(normalized); } catch (err) { console.error("Error fetching profile:", err); res.status(500).json({ error: "Failed to fetch profile" }); } }); // Update username app.put("/api/profile/username", async(req, res) => { try { const { currentUsername, newUsername } = req.body; await Score.updateMany({ username: currentUsername }, { $set: { username: newUsername } }); res.json({ success: true }); } catch (err) { console.error("Error updating username:", err); res.status(500).json({ error: "Failed to update username" }); } }); // Update password app.put("/api/profile/password", async(req, res) => { try { const { username, currentPassword, newPassword } = req.body; res.json({ success: true, message: "Password updated successfully" }); } catch (err) { console.error("Error updating password:", err); res.status(500).json({ error: "Failed to update password" }); } }); // Settings API app.get("/api/settings/:username", async(req, res) => { try { const { username } = req.params; let doc = await UserSettings.findOne({ username }); if (!doc) { doc = await UserSettings.create({ username }); } res.json(doc); } catch (err) { console.error("Error fetching settings:", err); res.status(500).json({ error: "Failed to fetch settings" }); } }); app.put("/api/settings", async(req, res) => { try { const { username, settings } = req.body; if (!username || !settings) return res.status(400).json({ error: "Invalid payload" }); await UserSettings.updateOne({ username }, { $set: {...settings, username } }, { upsert: true }); const saved = await UserSettings.findOne({ username }); res.json({ success: true, settings: saved }); } catch (err) { console.error("Error saving settings:", err); res.status(500).json({ error: "Failed to save settings" }); } }); // -------------------- CORS Setup -------------------- app.use(cors({ origin: [ "http://localhost:4200", "https://aptitude-game-site.onrender.com" // ✅ your frontend URL ], methods: ["GET", "POST", "PUT"], credentials: true }));
+// Settings API
+app.get("/api/settings/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    let doc = await UserSettings.findOne({ username });
+    if (!doc) {
+      doc = await UserSettings.create({ username });
+    }
+    res.json(doc);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch settings" });
+  }
+});
+
+app.put("/api/settings", async (req, res) => {
+  try {
+    const { username, settings } = req.body;
+    if (!username || !settings) return res.status(400).json({ error: "Invalid payload" });
+    await UserSettings.updateOne({ username }, { $set: { ...settings, username } }, { upsert: true });
+    const saved = await UserSettings.findOne({ username });
+    res.json({ success: true, settings: saved });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save settings" });
+  }
+});
 
 // -------------------- Start Server --------------------
 const PORT = process.env.PORT || 5000;

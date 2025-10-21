@@ -53,17 +53,16 @@ export class SettingsComponent implements OnInit {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    this.http.get<AppSettings>(`https://aptitude-game-site-backend.onrender.com/api/settings/${encodeURIComponent(username)}`)
+    // ✅ Use proxy for backend API
+    this.http.get<AppSettings>(`/api/settings/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.settings = { ...this.settings, ...data };
           this.loading = false;
-          // apply theme immediately
           this.applyTheme();
         },
         error: (err) => {
           console.error('Error loading settings:', err);
-          // Use default settings if loading fails
           this.loading = false;
         }
       });
@@ -73,11 +72,12 @@ export class SettingsComponent implements OnInit {
     this.saving = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    this.http.put('https://aptitude-game-site-backend.onrender.com/api/settings', {
+    // ✅ Use proxy for backend API
+    this.http.put('/api/settings', {
       username,
       settings: this.settings
     }).subscribe({
-      next: (response: any) => {
+      next: () => {
         this.message = 'Settings saved successfully!';
         this.saving = false;
         this.applyTheme();
@@ -118,4 +118,3 @@ export class SettingsComponent implements OnInit {
     document.body.setAttribute('data-theme', theme);
   }
 }
-

@@ -54,7 +54,8 @@ export class ProfileComponent implements OnInit {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    this.http.get<UserProfile>(`https://aptitude-game-site-backend.onrender.com/api/profile/${encodeURIComponent(username)}`)
+    // ✅ Use proxy path instead of hardcoded backend URL
+    this.http.get<UserProfile>(`/api/profile/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.profile = data;
@@ -90,7 +91,7 @@ export class ProfileComponent implements OnInit {
     
     // Update display name in Firebase first, then reflect in backend scores
     this.auth.updateDisplayName(this.newUsername.trim())
-      .then(() => this.http.put('https://aptitude-game-site-backend.onrender.com/api/profile/username', {
+      .then(() => this.http.put('/api/profile/username', {
         currentUsername,
         newUsername: this.newUsername.trim()
       }).toPromise())
@@ -174,4 +175,3 @@ export class ProfileComponent implements OnInit {
     return `#${rank}`;
   }
 }
-

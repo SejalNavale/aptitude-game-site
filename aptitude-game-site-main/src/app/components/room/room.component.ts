@@ -5,6 +5,9 @@ import { io, Socket } from 'socket.io-client';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 
+const API_URL = 'http://localhost:5000/api';
+const SOCKET_URL = 'http://localhost:5000';
+
 @Component({
   selector: 'app-room',
   standalone: true,
@@ -17,7 +20,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   private auth = inject(AuthService);
   username = '';
-  roomCode: string = '';
+  roomCode = '';
   generatedCode: string | null = null;
   isOwner = false;
   quizStarted = false;
@@ -26,12 +29,13 @@ export class RoomComponent implements OnInit, OnDestroy {
   currentQuestionIndex = 0;
   timeLeftSeconds = 0;
   timerId: any = null;
-  // Game configuration
-  challengeName: string = '';
+
+  challengeName = '';
   domain: 'Verbal' | 'Logical' | 'Quant' | 'Mixed' = 'Mixed';
-  squadSize: number = 10;
-  numQuestions: number = 10;
-  timeLimit: number = 20;
+  squadSize = 10;
+  numQuestions = 10;
+  timeLimit = 20;
+
   settings: any = {
     challengeName: '',
     domain: 'Mixed',
@@ -39,55 +43,69 @@ export class RoomComponent implements OnInit, OnDestroy {
     numQuestions: 10,
     timeLimit: 20
   };
+
   players: any[] = [];
   chat: string[] = [];
-  newMessage: string = '';
-  questions: any[] = [];
+  newMessage = '';
+  currentAnswers: any = {};
   hasAnswered = false;
   waitingForOthers = false;
-  currentAnswers: any = {};
   showFinalResults = false;
 
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
     const u = this.auth.currentUser;
-    this.username = (u?.displayName || u?.email || 'Player') as string;
-    // Load saved defaults for quiz settings
-    this.http.get<any>(`https://aptitude-game-site-backend.onrender.com/api/settings/${encodeURIComponent(this.username)}`)
-      .subscribe({
-        next: (s) => {
-          if (s) {
-            this.domain = s.defaultDomain || this.domain;
-            this.numQuestions = Number(s.defaultQuestions || this.numQuestions);
-            this.timeLimit = Number(s.defaultTimeLimit || this.timeLimit);
-            this.squadSize = Number((s.maxPlayers || this.squadSize));
-          }
-        },
-        error: () => {}
-      });
-    this.socket = io('https://aptitude-game-site-backend.onrender.com/', { transports: ['websocket', 'polling'] });
-    this.socket.on('connect_error', (err: any) => {
-      console.error('Socket connect_error:', err?.message || err);
-      alert('Cannot connect to game server. Please ensure it is running.');
-    });
-    this.socket.on('connect_timeout', () => {
-      console.error('Socket connect_timeout');
+    this.username = u?.displayName || u?.email || 'Player';
+
+    // Fetch user settings
+    this.http.get<any>(`${API_URL}/settings/${encodeURIComponent(this.username)}`).subscribe({
+      next: (s) => {
+        if (s) {
+          this.domain = s.defaultDomain || this.domain;
+          this.numQuestions = Number(s.defaultQuestions || this.numQuestions);
+          this.timeLimit = Number(s.defaultTimeLimit || this.timeLimit);
+          this.squadSize = Number(s.maxPlayers || this.squadSize);
+        }
+      },
+      error: () => {}
     });
 
+    // Initialize Socket.IO with more robust configuration
+    this.socket = io(SOCKET_URL, { 
+      transports: ['polling', 'websocket'],
+      timeout: 20000,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
+    });
+
+    this.socket.on('connect_error', (err: any) => {
+      console.error('Socket connect_error:', err?.message || err);
+      console.log('Trying to reconnect...');
+    });
+
+    this.socket.on('connect', () => {
+      console.log('✅ Connected to server:', this.socket.id);
+    });
+
+    this.socket.on('disconnect', (reason: string) => {
+      console.log('❌ Disconnected from server:', reason);
+    });
+
+    this.registerSocketEvents();
+  }
+
+  private registerSocketEvents() {
     this.socket.on('roomUpdate', (room: any) => {
       this.players = room.players || [];
       this.settings = room.settings || this.settings;
-      if (room.maxPlayers) {
-        this.settings.maxPlayers = room.maxPlayers;
-      }
       this.generatedCode = room.roomCode || this.generatedCode;
-      // Sort players by score for leaderboard
       this.sortPlayersByScore();
     });
 
     this.socket.on('quizStarted', (data: any) => {
-      console.log('Quiz start signal received');
       this.quizStarted = true;
       this.currentQuestionIndex = data.currentQuestionIndex || 0;
       this.currentQuestion = data.currentQuestion;
@@ -95,17 +113,10 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.hasAnswered = false;
       this.waitingForOthers = false;
       this.timeLeftSeconds = data.timeLimit || 20;
-      // Update settings with actual question count from server
-      if (data.numQuestions) {
-        this.settings.numQuestions = data.numQuestions;
-      }
       this.startTimer();
     });
 
-    this.socket.on('timer', (timeLeft: number) => {
-      this.timeLeftSeconds = timeLeft;
-    });
-
+    this.socket.on('timer', (timeLeft: number) => this.timeLeftSeconds = timeLeft);
 
     this.socket.on('answerSubmitted', (data: any) => {
       this.currentAnswers = data.currentAnswers;
@@ -113,19 +124,16 @@ export class RoomComponent implements OnInit, OnDestroy {
         this.hasAnswered = true;
         this.waitingForOthers = true;
       }
-      // Update players list with new scores
       this.players = data.players || this.players;
       this.sortPlayersByScore();
     });
 
     this.socket.on('questionFinished', (data: any) => {
-      console.log('Question finished, correct answer:', data.correctAnswer);
       this.players = data.players;
       this.hasAnswered = false;
       this.waitingForOthers = false;
       this.sortPlayersByScore();
     });
-
 
     this.socket.on('quizFinished', (data: any) => {
       this.quizStarted = false;
@@ -133,7 +141,6 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.sortPlayersByScore();
       this.showFinalResults = true;
       this.clearTimer();
-      console.log('Final scores:', data.finalScores);
     });
 
     this.socket.on('roomClosed', () => {
@@ -143,46 +150,41 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.quizStarted = false;
     });
 
-    this.socket.on('chatMessage', (msg: string) => {
-      this.chat.push(msg);
+    this.socket.on('chatMessage', (msg: string) => this.chat.push(msg));
+
+    this.socket.on('error', (data: any) => {
+      console.error('Server error:', data.message);
+      alert(`Server error: ${data.message}`);
     });
   }
 
   createRoom() {
-    // consolidate current form values into settings
-    this.settings = {
+    const roomSettings = {
       challengeName: this.challengeName,
       domain: this.domain,
       maxPlayers: Number(this.squadSize || 10),
       numQuestions: Number(this.numQuestions || 10),
       timeLimit: Number(this.timeLimit || 20)
     };
-    this.socket.emit('createRoom', { username: this.username, settings: this.settings }, (res: any) => {
+
+    this.socket.emit('createRoom', { username: this.username, settings: roomSettings }, (res: any) => {
       if (res?.success) {
         this.generatedCode = res.roomCode;
         this.isOwner = true;
         this.settings = res.settings;
-      } else {
-        alert('Create room failed');
-      }
+      } else alert('Create room failed');
     });
   }
 
   joinRoom() {
     if (!this.roomCode.trim()) return alert('Enter code');
+
     this.socket.emit('joinRoom', { username: this.username, roomCode: this.roomCode }, (res: any) => {
       if (res?.success) {
         this.generatedCode = res.roomCode;
-        this.isOwner = (res.roomOwner === this.username) || this.isOwner;
-      } else {
-        alert(res?.message || 'Join failed');
-      }
+        this.isOwner = res.roomOwner === this.username || this.isOwner;
+      } else alert(res?.message || 'Join failed');
     });
-  }
-
-  updateSettings() {
-    if (!this.generatedCode) return;
-    this.socket.emit('updateSettings', { roomCode: this.generatedCode, settings: this.settings, username: this.username });
   }
 
   startQuiz() {
@@ -192,92 +194,42 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   sendMessage() {
     if (!this.newMessage.trim() || !this.generatedCode) return;
-    this.socket.emit('chatMessage', {
-      roomCode: this.generatedCode,
-      username: this.username,
-      message: this.newMessage
-    });
+    this.socket.emit('chatMessage', { roomCode: this.generatedCode, username: this.username, message: this.newMessage });
     this.newMessage = '';
+  }
+
+  chooseOption(option: string) {
+    if (this.hasAnswered || !this.generatedCode) return;
+    const index = this.currentOptions.indexOf(option);
+    if (index === -1) return;
+    this.socket.emit('submitAnswer', { roomCode: this.generatedCode, username: this.username, answer: index });
   }
 
   copyCode() {
     if (!this.generatedCode) return;
-    const code = this.generatedCode;
-    const nav: any = (window as any).navigator;
-    if (nav && nav.clipboard && nav.clipboard.writeText) {
-      nav.clipboard.writeText(code).then(() => {
-        console.log('Room code copied');
-      });
-    } else {
-      const input = document.createElement('input');
-      input.value = code;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      console.log('Room code copied (fallback)');
-    }
-  }
-
-
-
-
-  chooseOption(option: string) {
-  if (this.hasAnswered || !this.generatedCode) return;
-
-  const index = this.currentOptions.indexOf(option);
-  if (index === -1) return;
-
-  console.log('Selected option index:', index);
-  this.socket.emit('submitAnswer', {
-    roomCode: this.generatedCode,
-    username: this.username,
-    answer: index   // send index, not string
-  });
-}
-
-  nextQuestion() {
-    if (!this.questions.length) return;
-    const next = this.currentQuestionIndex + 1;
-    if (next < this.questions.length) {
-      this.currentQuestionIndex = next;
-      const q = this.questions[next];
-      this.currentQuestion = q.question;
-      this.currentOptions = q.options || [];
-      this.startTimer();
-    } else {
-      this.currentQuestion = 'Quiz finished!';
-      this.currentOptions = [];
-      this.clearTimer();
-    }
+    navigator.clipboard.writeText(this.generatedCode).then(() => console.log('Room code copied'));
   }
 
   startTimer() {
     this.clearTimer();
-    // Timer is managed by server, just display the countdown
     this.timerId = setInterval(() => {
       if (this.timeLeftSeconds <= 0 && !this.hasAnswered) {
-        // Time's up, submit empty answer
-        this.socket.emit('submitAnswer', {
-          roomCode: this.generatedCode,
-          username: this.username,
-          answer: -1
-        });
+        this.socket.emit('submitAnswer', { roomCode: this.generatedCode, username: this.username, answer: -1 });
         this.hasAnswered = true;
       }
     }, 1000);
   }
 
   clearTimer() {
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
+    if (this.timerId) clearInterval(this.timerId);
+    this.timerId = null;
   }
 
   submitScore(score: number) {
-    this.http.post('https://aptitude-game-site-backend.onrender.com/api/score', { username: this.username, score })
-      .subscribe(res => console.log('score saved', res), err => console.error(err));
+    this.http.post(`${API_URL}/score`, { username: this.username, score }).subscribe({
+      next: (res) => console.log('score saved', res),
+      error: (err) => console.error(err)
+    });
   }
 
   sortPlayersByScore() {
@@ -295,7 +247,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   getRankText(index: number): string {
     switch (index) {
-      case 0: return 'WINNER';
+      case 0: return '1st Place';
       case 1: return '2nd Place';
       case 2: return '3rd Place';
       default: return `${index + 1}th Place`;
@@ -308,5 +260,6 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.socket.disconnect();
+    this.clearTimer();
   }
 }

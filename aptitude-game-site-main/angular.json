@@ -67,7 +67,8 @@
               "buildTarget": "aptitude-game-site:build:production"
             },
             "development": {
-              "buildTarget": "aptitude-game-site:build:development"
+              "buildTarget": "aptitude-game-site:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

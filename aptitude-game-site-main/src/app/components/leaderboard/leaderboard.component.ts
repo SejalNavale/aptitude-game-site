@@ -38,7 +38,8 @@ export class LeaderboardComponent implements OnInit {
 
   loadLeaderboard() {
     this.loading = true;
-    this.http.get<UserScore[]>('https://aptitude-game-site-backend.onrender.com/api/leaderboard')
+    // ✅ Use proxy path instead of hardcoded Render URL
+    this.http.get<UserScore[]>('/api/leaderboard')
       .subscribe({
         next: (data) => {
           // Ensure proper sort by rank if provided, otherwise by totalScore desc
@@ -90,4 +91,3 @@ export class LeaderboardComponent implements OnInit {
     this.loadLeaderboard();
   }
 }
-
