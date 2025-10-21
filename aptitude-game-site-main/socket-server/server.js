@@ -7,8 +7,15 @@ const cors = require("cors");
 
 // -------------------- App Setup --------------------
 const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Configure CORS for production and development
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [process.env.FRONTEND_URL || 'https://aptitude-game-frontend.onrender.com']
+  : ['http://localhost:4200'];
+
 app.use(cors({
-  origin: "http://localhost:4200", // only local Angular frontend
+  origin: allowedOrigins,
   methods: ["GET", "POST", "PUT"],
   credentials: true
 }));
@@ -21,8 +28,10 @@ app.get("/", (req, res) => {
 });
 
 // -------------------- MongoDB Connection --------------------
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://ayushshirke123_db_user:IIT_project@quizappcluster.hnwrp1w.mongodb.net/IIT_project?retryWrites=true&w=majority&appName=QuizAppCluster";
+
 mongoose
-  .connect("mongodb+srv://ayushshirke123_db_user:IIT_project@quizappcluster.hnwrp1w.mongodb.net/IIT_project?retryWrites=true&w=majority&appName=QuizAppCluster")
+  .connect(MONGODB_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
