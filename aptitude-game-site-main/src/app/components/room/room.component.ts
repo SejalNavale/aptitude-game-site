@@ -5,8 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 
-const API_URL = 'http://localhost:5000/api';
-const SOCKET_URL = 'http://localhost:5000';
+const API_URL = 'https://aptitude-game-backend.onrender.com/api';
+const SOCKET_URL = 'https://aptitude-game-backend.onrender.com';
 
 @Component({
   selector: 'app-room',
