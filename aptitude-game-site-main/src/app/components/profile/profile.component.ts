@@ -44,6 +44,8 @@ export class ProfileComponent implements OnInit {
   saving = false;
   message = '';
 
+  private static readonly API_URL = 'https://aptitude-game-backend.onrender.com/api';
+
   ngOnInit() {
     this.currentUser = this.auth.currentUser;
     this.newUsername = this.currentUser?.displayName || this.currentUser?.email || '';
@@ -54,8 +56,8 @@ export class ProfileComponent implements OnInit {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    // ✅ Use proxy path instead of hardcoded backend URL
-    this.http.get<UserProfile>(`/api/profile/${encodeURIComponent(username)}`)
+    // Use absolute backend URL in production static hosting
+    this.http.get<UserProfile>(`${ProfileComponent.API_URL}/profile/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.profile = data;
@@ -91,7 +93,7 @@ export class ProfileComponent implements OnInit {
     
     // Update display name in Firebase first, then reflect in backend scores
     this.auth.updateDisplayName(this.newUsername.trim())
-      .then(() => this.http.put('/api/profile/username', {
+      .then(() => this.http.put(`${ProfileComponent.API_URL}/profile/username`, {
         currentUsername,
         newUsername: this.newUsername.trim()
       }).toPromise())

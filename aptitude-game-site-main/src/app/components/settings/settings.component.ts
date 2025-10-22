@@ -44,6 +44,8 @@ export class SettingsComponent implements OnInit {
   saving = false;
   message = '';
 
+  private static readonly API_URL = 'https://aptitude-game-backend.onrender.com/api';
+
   ngOnInit() {
     this.currentUser = this.auth.currentUser;
     this.loadSettings();
@@ -53,8 +55,8 @@ export class SettingsComponent implements OnInit {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    // ✅ Use proxy for backend API
-    this.http.get<AppSettings>(`/api/settings/${encodeURIComponent(username)}`)
+    // Use absolute backend URL in production
+    this.http.get<AppSettings>(`${SettingsComponent.API_URL}/settings/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.settings = { ...this.settings, ...data };
@@ -72,8 +74,8 @@ export class SettingsComponent implements OnInit {
     this.saving = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    // ✅ Use proxy for backend API
-    this.http.put('/api/settings', {
+    // Use absolute backend URL in production
+    this.http.put(`${SettingsComponent.API_URL}/settings`, {
       username,
       settings: this.settings
     }).subscribe({
