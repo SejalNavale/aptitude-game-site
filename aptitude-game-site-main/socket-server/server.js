@@ -10,13 +10,20 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Configure CORS for production and development
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [process.env.FRONTEND_URL || 'https://aptitude-game-frontend.onrender.com']
+// Ensure the deployed frontend origin is allowed in production
+const frontendOrigins = [
+  process.env.FRONTEND_URL,
+  'https://aptitude-game-site.onrender.com',
+  'https://aptitude-game-frontend.onrender.com'
+].filter(Boolean);
+
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? frontendOrigins
   : ['http://localhost:4200'];
 
 app.use(cors({
   origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT"],
+  methods: ['GET', 'POST', 'PUT'],
   credentials: true
 }));
 app.use(express.json());
@@ -75,8 +82,8 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:4200", // only local Angular frontend
-    methods: ["GET", "POST", "PUT"],
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT'],
     credentials: true
   }
 });
@@ -263,6 +270,48 @@ app.get("/api/questions", async (req, res) => {
     const questions = await Question.find(filter).limit(Number(limit) || 10);
     res.json(questions);
   } catch {
+    res.status(500).json([]);
+  }
+});
+
+// Save score API (used by frontend)
+app.post('/api/score', async (req, res) => {
+  try {
+    const { username, score, domain } = req.body || {};
+    if (!username || typeof score !== 'number') {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+    const saved = await Score.create({ username, score, domain: domain || 'Mixed' });
+    res.json({ success: true, score: saved });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save score' });
+  }
+});
+
+// Leaderboard API (aggregate scores per user)
+app.get('/api/leaderboard', async (_req, res) => {
+  try {
+    const agg = await Score.aggregate([
+      {
+        $group: {
+          _id: '$username',
+          totalScore: { $sum: '$score' },
+          gamesPlayed: { $sum: 1 },
+          averageScore: { $avg: '$score' }
+        }
+      },
+      { $addFields: { averageScore: { $round: ['$averageScore', 0] } } },
+      { $sort: { totalScore: -1 } }
+    ]);
+    const mapped = agg.map((u) => ({
+      _id: u._id,
+      username: u._id,
+      totalScore: u.totalScore,
+      gamesPlayed: u.gamesPlayed,
+      averageScore: u.averageScore
+    }));
+    res.json(mapped);
+  } catch (err) {
     res.status(500).json([]);
   }
 });

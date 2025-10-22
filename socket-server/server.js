@@ -10,13 +10,19 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Configure CORS for production and development
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? ['https://aptitude-game-site.onrender.com']  // your deployed frontend URL
+const frontendOrigins = [
+  process.env.FRONTEND_URL,
+  'https://aptitude-game-site.onrender.com',
+  'https://aptitude-game-frontend.onrender.com'
+].filter(Boolean);
+
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? frontendOrigins
   : ['http://localhost:4200'];
 
 app.use(cors({
   origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT"],
+  methods: ['GET', 'POST', 'PUT'],
   credentials: true
 }));
 app.use(express.json());
@@ -75,9 +81,7 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? ['https://aptitude-game-site.onrender.com']  // ✅ your frontend on Render
-      : ['http://localhost:4200'],                   // ✅ local dev
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT'],
     credentials: true
   }
@@ -266,6 +270,134 @@ app.get("/api/questions", async (req, res) => {
     const questions = await Question.find(filter).limit(Number(limit) || 10);
     res.json(questions);
   } catch {
+    res.status(500).json([]);
+  }
+});
+
+// Save score API (used by frontend)
+app.post('/api/score', async (req, res) => {
+  try {
+    const { username, score, domain } = req.body || {};
+    if (!username || typeof score !== 'number') {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+    const saved = await Score.create({ username, score, domain: domain || 'Mixed' });
+    res.json({ success: true, score: saved });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save score' });
+  }
+});
+
+// Leaderboard API (aggregate scores per user)
+app.get('/api/leaderboard', async (_req, res) => {
+  try {
+    const agg = await Score.aggregate([
+      {
+        $group: {
+          _id: '$username',
+          totalScore: { $sum: '$score' },
+          gamesPlayed: { $sum: 1 },
+          averageScore: { $avg: '$score' }
+        }
+      },
+      { $addFields: { averageScore: { $round: ['$averageScore', 0] } } },
+      { $sort: { totalScore: -1 } }
+    ]);
+    const mapped = agg.map((u) => ({
+      _id: u._id,
+      username: u._id,
+      totalScore: u.totalScore,
+      gamesPlayed: u.gamesPlayed,
+      averageScore: u.averageScore
+    }));
+    res.json(mapped);
+  } catch (err) {
+    res.status(500).json([]);
+  }
+});
+
+// Profile APIs
+app.get('/api/profile/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const agg = await Score.aggregate([
+      { $match: { username } },
+      {
+        $group: {
+          _id: '$username',
+          totalScore: { $sum: '$score' },
+          gamesPlayed: { $sum: 1 },
+          averageScore: { $avg: '$score' },
+          firstGameAt: { $min: '$createdAt' }
+        }
+      }
+    ]);
+    const doc = agg[0] || null;
+    res.json({
+      username,
+      email: '',
+      totalScore: doc?.totalScore || 0,
+      gamesPlayed: doc?.gamesPlayed || 0,
+      averageScore: Math.round(doc?.averageScore || 0),
+      rank: 0,
+      joinDate: doc?.firstGameAt || new Date()
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load profile' });
+  }
+});
+
+app.put('/api/profile/username', async (req, res) => {
+  try {
+    const { currentUsername, newUsername } = req.body || {};
+    if (!currentUsername || !newUsername) {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+    await Score.updateMany({ username: currentUsername }, { $set: { username: newUsername } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update username' });
+  }
+});
+
+// Save score API (used by frontend)
+app.post('/api/score', async (req, res) => {
+  try {
+    const { username, score, domain } = req.body || {};
+    if (!username || typeof score !== 'number') {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+    const saved = await Score.create({ username, score, domain: domain || 'Mixed' });
+    res.json({ success: true, score: saved });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save score' });
+  }
+});
+
+// Leaderboard API (aggregate scores per user)
+app.get('/api/leaderboard', async (_req, res) => {
+  try {
+    const agg = await Score.aggregate([
+      {
+        $group: {
+          _id: '$username',
+          totalScore: { $sum: '$score' },
+          gamesPlayed: { $sum: 1 },
+          averageScore: { $avg: '$score' }
+        }
+      },
+      { $addFields: { averageScore: { $round: ['$averageScore', 0] } } },
+      { $sort: { totalScore: -1 } }
+    ]);
+    const mapped = agg.map((u) => ({
+      _id: u._id,
+      username: u._id,
+      totalScore: u.totalScore,
+      gamesPlayed: u.gamesPlayed,
+      averageScore: u.averageScore
+    }));
+    res.json(mapped);
+  } catch (err) {
     res.status(500).json([]);
   }
 });
