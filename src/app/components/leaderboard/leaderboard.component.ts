@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 const BASE_URL = 'https://aptitude-game-site-backend-wdo1.onrender.com';
 
@@ -40,7 +41,7 @@ export class LeaderboardComponent implements OnInit {
 
   loadLeaderboard() {
     this.loading = true;
-    this.http.get<UserScore[]>('http://localhost:5000/api/leaderboard')
+this.http.get<UserScore[]>(`${environment.apiUrl}/leaderboard`)
       .subscribe({
         next: (data) => {
           // Ensure proper sort by rank if provided, otherwise by totalScore desc

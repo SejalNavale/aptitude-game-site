@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 const BASE_URL = 'https://aptitude-game-site-backend-wdo1.onrender.com';
 
@@ -56,7 +57,7 @@ export class ProfileComponent implements OnInit {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    this.http.get<UserProfile>(`http://localhost:5000/api/profile/${encodeURIComponent(username)}`)
+this.http.get<UserProfile>(`${environment.apiUrl}/profile/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.profile = data;
@@ -92,10 +93,10 @@ export class ProfileComponent implements OnInit {
     
     // Update display name in Firebase first, then reflect in backend scores
     this.auth.updateDisplayName(this.newUsername.trim())
-      .then(() => this.http.put('http://localhost:5000/api/profile/username', {
-        currentUsername,
-        newUsername: this.newUsername.trim()
-      }).toPromise())
+  .then(() =>this.http.put(`${environment.apiUrl}/profile/username`, { currentUsername, newUsername: this.newUsername.trim() }).toPromise()
+
+)
+
       .then(() => {
         this.currentUser = this.auth.currentUser;
         this.message = 'Username updated successfully!';
