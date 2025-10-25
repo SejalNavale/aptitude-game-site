@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
+import { LanguageService } from '../../core/language.service';
 import { Router } from '@angular/router';
 
 interface AppSettings {
@@ -27,6 +28,7 @@ export class SettingsComponent implements OnInit {
   private auth = inject(AuthService);
   private http = inject(HttpClient);
   private router = inject(Router);
+  private languageService = inject(LanguageService);
 
   currentUser: any = null;
   settings: AppSettings = {
@@ -53,16 +55,18 @@ export class SettingsComponent implements OnInit {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    // ✅ Use proxy for backend API
-    this.http.get<AppSettings>(`/api/settings/${encodeURIComponent(username)}`)
+    this.http.get<AppSettings>(`http://localhost:5000/api/settings/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.settings = { ...this.settings, ...data };
           this.loading = false;
+          // apply theme and language immediately
           this.applyTheme();
+          this.applyLanguage();
         },
         error: (err) => {
           console.error('Error loading settings:', err);
+          // Use default settings if loading fails
           this.loading = false;
         }
       });
@@ -72,15 +76,15 @@ export class SettingsComponent implements OnInit {
     this.saving = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
     
-    // ✅ Use proxy for backend API
-    this.http.put('/api/settings', {
+    this.http.put('http://localhost:5000/api/settings', {
       username,
       settings: this.settings
     }).subscribe({
-      next: () => {
+      next: (response: any) => {
         this.message = 'Settings saved successfully!';
         this.saving = false;
         this.applyTheme();
+        this.applyLanguage();
         setTimeout(() => this.message = '', 3000);
       },
       error: (err) => {
@@ -111,10 +115,30 @@ export class SettingsComponent implements OnInit {
 
   onThemeChange() {
     this.applyTheme();
+    // Save immediately when theme changes
+    this.saveSettings();
+  }
+
+  onLanguageChange() {
+    this.languageService.setLanguage(this.settings.language);
+    // Save immediately when language changes
+    this.saveSettings();
   }
 
   private applyTheme() {
     const theme = this.settings.theme || 'dark';
     document.body.setAttribute('data-theme', theme);
+    console.log('Theme applied:', theme);
+  }
+
+  private applyLanguage() {
+    this.languageService.setLanguage(this.settings.language);
+    console.log('Language applied:', this.settings.language);
+  }
+
+  // Helper method to get translations
+  t(key: string): string {
+    return this.languageService.translate(key);
   }
 }
+

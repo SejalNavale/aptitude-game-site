@@ -326,7 +326,7 @@ input::placeholder {
 
 .score {
     font-weight: bold;
-    color: #00ffb3;
+    color: #022219;
     font-size: 1.1rem;
 }
 
@@ -358,7 +358,7 @@ input::placeholder {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
-    color: #9efcf1;
+    color: #44726d;
 }
 
 .timer {

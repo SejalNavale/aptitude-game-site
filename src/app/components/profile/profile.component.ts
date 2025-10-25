@@ -5,6 +5,8 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import { Router } from '@angular/router';
 
+const BASE_URL = 'https://aptitude-game-site-backend-wdo1.onrender.com';
+
 interface UserProfile {
   username: string;
   email: string;
@@ -31,13 +33,13 @@ export class ProfileComponent implements OnInit {
   profile: UserProfile | null = null;
   loading = true;
   error = '';
-  
+
   // Form data
   newUsername = '';
   currentPassword = '';
   newPassword = '';
   confirmPassword = '';
-  
+
   // UI states
   editingUsername = false;
   changingPassword = false;
@@ -53,9 +55,8 @@ export class ProfileComponent implements OnInit {
   loadProfile() {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
-    
-    // ✅ Use proxy path instead of hardcoded backend URL
-    this.http.get<UserProfile>(`/api/profile/${encodeURIComponent(username)}`)
+
+    this.http.get<UserProfile>(`${BASE_URL}/api/profile/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.profile = data;
@@ -88,10 +89,9 @@ export class ProfileComponent implements OnInit {
 
     this.saving = true;
     const currentUsername = this.currentUser?.displayName || this.currentUser?.email || 'Player';
-    
-    // Update display name in Firebase first, then reflect in backend scores
+
     this.auth.updateDisplayName(this.newUsername.trim())
-      .then(() => this.http.put('/api/profile/username', {
+      .then(() => this.http.put(`${BASE_URL}/api/profile/username`, {
         currentUsername,
         newUsername: this.newUsername.trim()
       }).toPromise())

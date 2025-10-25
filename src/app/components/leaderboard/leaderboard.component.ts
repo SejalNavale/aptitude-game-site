@@ -4,6 +4,8 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import { Router } from '@angular/router';
 
+const BASE_URL = 'https://aptitude-game-site-backend-wdo1.onrender.com';
+
 interface UserScore {
   _id: string;
   username: string;
@@ -38,15 +40,10 @@ export class LeaderboardComponent implements OnInit {
 
   loadLeaderboard() {
     this.loading = true;
-    // ✅ Use proxy path instead of hardcoded Render URL
-    this.http.get<UserScore[]>('/api/leaderboard')
+    this.http.get<UserScore[]>(`${BASE_URL}/api/leaderboard`)
       .subscribe({
         next: (data) => {
-          // Ensure proper sort by rank if provided, otherwise by totalScore desc
-          const sorted = [...data].sort((a, b) => {
-            if (a.rank != null && b.rank != null) return a.rank - b.rank;
-            return (b.totalScore || 0) - (a.totalScore || 0);
-          });
+          const sorted = [...data].sort((a, b) => a.rank - b.rank);
           this.leaderboard = sorted.map((u, idx) => ({ ...u, rank: u.rank ?? idx + 1 }));
           this.findCurrentUserRank();
           this.loading = false;

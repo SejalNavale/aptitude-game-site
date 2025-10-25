@@ -85,11 +85,9 @@
                             <h3>Language</h3>
                             <p>Select your preferred language</p>
                         </div>
-                        <select [(ngModel)]="settings.language" class="setting-select">
+                        <select [(ngModel)]="settings.language" (change)="onLanguageChange()" class="setting-select">
                             <option value="en">English</option>
-                            <option value="es">Español</option>
-                            <option value="fr">Français</option>
-                            <option value="de">Deutsch</option>
+                            <option value="hi">हिन्दी (Hindi)</option>
                         </select>
                     </div>
                 </div>
