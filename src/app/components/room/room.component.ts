@@ -4,10 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { io, Socket } from 'socket.io-client';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
-import { environment } from '../../../environments/environment';
-
-
-const API_URL = environment.apiUrl; // proxy-friendly
 
 @Component({
   selector: 'app-room',
@@ -17,27 +13,25 @@ const API_URL = environment.apiUrl; // proxy-friendly
   styleUrls: ['./room.component.css']
 })
 export class RoomComponent implements OnInit, OnDestroy {
-  socket!: Socket;
+  socket!: Socket | null;
 
   private auth = inject(AuthService);
   username = '';
-  roomCode = '';
+  roomCode: string = '';
   generatedCode: string | null = null;
   isOwner = false;
   quizStarted = false;
   currentQuestion = '';
-  newMessage: string = ''; 
   currentOptions: string[] = [];
   currentQuestionIndex = 0;
   timeLeftSeconds = 0;
   timerId: any = null;
-
-  challengeName = '';
+  // Game configuration
+  challengeName: string = '';
   domain: 'Verbal' | 'Logical' | 'Quant' | 'Mixed' = 'Mixed';
-  squadSize = 10;
-  numQuestions = 10;
-  timeLimit = 20;
-
+  squadSize: number = 10;
+  numQuestions: number = 10;
+  timeLimit: number = 20;
   settings: any = {
     challengeName: '',
     domain: 'Mixed',
@@ -45,86 +39,69 @@ export class RoomComponent implements OnInit, OnDestroy {
     numQuestions: 10,
     timeLimit: 20
   };
-
   players: any[] = [];
   chat: string[] = [];
-  currentAnswers: any = {};
+  newMessage: string = '';
+  questions: any[] = [];
   hasAnswered = false;
   waitingForOthers = false;
+  currentAnswers: any = {};
   showFinalResults = false;
+
+  // Replace localhost with your deployed backend
+  private readonly SOCKET_URL = 'https://aptitude-game-site-backend-wdo1.onrender.com';
+  private readonly API_BASE = 'https://aptitude-game-site-backend-wdo1.onrender.com';
 
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
     const u = this.auth.currentUser;
-    this.username = u?.displayName || u?.email || 'Player';
+    this.username = (u?.displayName || u?.email || 'Player') as string;
 
-    // Fetch user settings via proxy
-    this.http.get<any>(`${API_URL}/settings/${encodeURIComponent(this.username)}`).subscribe({
-      next: (s) => {
-        if (s) {
-          this.domain = s.defaultDomain || this.domain;
-          this.numQuestions = Number(s.defaultQuestions || this.numQuestions);
-          this.timeLimit = Number(s.defaultTimeLimit || this.timeLimit);
-          this.squadSize = Number(s.maxPlayers || this.squadSize);
+    // Load saved defaults for quiz settings
+    this.http.get<any>(`${this.API_BASE}/api/settings/${encodeURIComponent(this.username)}`)
+      .subscribe({
+        next: (s) => {
+          if (s) {
+            this.domain = s.defaultDomain || this.domain;
+            this.numQuestions = Number(s.defaultQuestions || this.numQuestions);
+            this.timeLimit = Number(s.defaultTimeLimit || this.timeLimit);
+            this.squadSize = Number((s.maxPlayers || this.squadSize));
+          }
+        },
+        error: (err) => {
+          // ignore or optionally console
+          console.warn('Failed to load settings', err);
         }
-      },
-      error: () => {}
+      });
+
+    // Connect socket to deployed backend
+    this.socket = io(this.SOCKET_URL, { transports: ['websocket', 'polling'] });
+
+    this.socket.on('connect', () => {
+      console.log('Connected to socket server:', this.socket?.id);
     });
-
-    this.socket = io(environment.socketUrl, {
-  path: '/socket.io',
-  transports: ['websocket'],
-  timeout: 20000,
-  forceNew: true,
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000
-});
-
-
-const roomSettings = {
-    challengeName: this.challengeName,
-    domain: this.domain,
-    maxPlayers: Number(this.squadSize || 10),
-    numQuestions: Number(this.numQuestions || 10),
-    timeLimit: Number(this.timeLimit || 20)
-  };
-
-  this.socket.emit('createRoom', { username: this.username, settings: roomSettings }, (res: any) => {
-    console.log('createRoom response:', res);
-    if (res?.success) {
-      this.generatedCode = res.roomCode;
-      this.isOwner = true;
-      this.settings = res.settings;
-    } else alert('Create room failed');
-  });
 
     this.socket.on('connect_error', (err: any) => {
       console.error('Socket connect_error:', err?.message || err);
-      console.log('Trying to reconnect...');
+      alert('Cannot connect to game server. Please ensure it is running.');
+    });
+    this.socket.on('connect_timeout', () => {
+      console.error('Socket connect_timeout');
     });
 
-    this.socket.on('connect', () => {
-      console.log('✅ Connected to server:', this.socket.id);
-    });
-
-    this.socket.on('disconnect', (reason: string) => {
-      console.log('❌ Disconnected from server:', reason);
-    });
-
-    this.registerSocketEvents();
-  }
-
-  private registerSocketEvents() {
     this.socket.on('roomUpdate', (room: any) => {
       this.players = room.players || [];
       this.settings = room.settings || this.settings;
+      if (room.maxPlayers) {
+        this.settings.maxPlayers = room.maxPlayers;
+      }
       this.generatedCode = room.roomCode || this.generatedCode;
       this.sortPlayersByScore();
     });
 
     this.socket.on('quizStarted', (data: any) => {
+      console.log('Quiz start signal received');
       this.quizStarted = true;
       this.currentQuestionIndex = data.currentQuestionIndex || 0;
       this.currentQuestion = data.currentQuestion;
@@ -132,10 +109,15 @@ const roomSettings = {
       this.hasAnswered = false;
       this.waitingForOthers = false;
       this.timeLeftSeconds = data.timeLimit || 20;
+      if (data.numQuestions) {
+        this.settings.numQuestions = data.numQuestions;
+      }
       this.startTimer();
     });
 
-    this.socket.on('timer', (timeLeft: number) => this.timeLeftSeconds = timeLeft);
+    this.socket.on('timer', (timeLeft: number) => {
+      this.timeLeftSeconds = timeLeft;
+    });
 
     this.socket.on('answerSubmitted', (data: any) => {
       this.currentAnswers = data.currentAnswers;
@@ -148,6 +130,7 @@ const roomSettings = {
     });
 
     this.socket.on('questionFinished', (data: any) => {
+      console.log('Question finished, correct answer:', data.correctAnswer);
       this.players = data.players;
       this.hasAnswered = false;
       this.waitingForOthers = false;
@@ -160,6 +143,7 @@ const roomSettings = {
       this.sortPlayersByScore();
       this.showFinalResults = true;
       this.clearTimer();
+      console.log('Final scores:', data.finalScores);
     });
 
     this.socket.on('roomClosed', () => {
@@ -169,86 +153,143 @@ const roomSettings = {
       this.quizStarted = false;
     });
 
-    this.socket.on('chatMessage', (msg: string) => this.chat.push(msg));
-
-    this.socket.on('error', (data: any) => {
-      console.error('Server error:', data.message);
-      alert(`Server error: ${data.message}`);
+    this.socket.on('chatMessage', (msg: string) => {
+      this.chat.push(msg);
     });
   }
 
   createRoom() {
-    const roomSettings = {
+    this.settings = {
       challengeName: this.challengeName,
       domain: this.domain,
       maxPlayers: Number(this.squadSize || 10),
       numQuestions: Number(this.numQuestions || 10),
       timeLimit: Number(this.timeLimit || 20)
     };
-
-    this.socket.emit('createRoom', { username: this.username, settings: roomSettings }, (res: any) => {
+    if (!this.socket) return alert('Socket not connected');
+    this.socket.emit('createRoom', { username: this.username, settings: this.settings }, (res: any) => {
       if (res?.success) {
         this.generatedCode = res.roomCode;
         this.isOwner = true;
         this.settings = res.settings;
-      } else alert('Create room failed');
+      } else {
+        alert('Create room failed');
+      }
     });
   }
 
   joinRoom() {
     if (!this.roomCode.trim()) return alert('Enter code');
-
+    if (!this.socket) return alert('Socket not connected');
     this.socket.emit('joinRoom', { username: this.username, roomCode: this.roomCode }, (res: any) => {
       if (res?.success) {
         this.generatedCode = res.roomCode;
-        this.isOwner = res.roomOwner === this.username || this.isOwner;
-      } else alert(res?.message || 'Join failed');
+        this.isOwner = (res.roomOwner === this.username) || this.isOwner;
+      } else {
+        alert(res?.message || 'Join failed');
+      }
     });
+  }
+
+  updateSettings() {
+    if (!this.generatedCode) return;
+    if (!this.socket) return alert('Socket not connected');
+    this.socket.emit('updateSettings', { roomCode: this.generatedCode, settings: this.settings, username: this.username });
   }
 
   startQuiz() {
     if (!this.isOwner || !this.generatedCode) return;
+    if (!this.socket) return alert('Socket not connected');
     this.socket.emit('startQuiz', { roomCode: this.generatedCode, username: this.username });
   }
 
   sendMessage() {
     if (!this.newMessage.trim() || !this.generatedCode) return;
-    this.socket.emit('chatMessage', { roomCode: this.generatedCode, username: this.username, message: this.newMessage });
+    if (!this.socket) return alert('Socket not connected');
+    this.socket.emit('chatMessage', {
+      roomCode: this.generatedCode,
+      username: this.username,
+      message: this.newMessage
+    });
     this.newMessage = '';
+  }
+
+  copyCode() {
+    if (!this.generatedCode) return;
+    const code = this.generatedCode;
+    const nav: any = (window as any).navigator;
+    if (nav && nav.clipboard && nav.clipboard.writeText) {
+      nav.clipboard.writeText(code).then(() => {
+        console.log('Room code copied');
+      });
+    } else {
+      const input = document.createElement('input');
+      input.value = code;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      console.log('Room code copied (fallback)');
+    }
   }
 
   chooseOption(option: string) {
     if (this.hasAnswered || !this.generatedCode) return;
     const index = this.currentOptions.indexOf(option);
     if (index === -1) return;
-    this.socket.emit('submitAnswer', { roomCode: this.generatedCode, username: this.username, answer: index });
+    console.log('Selected option index:', index);
+    if (!this.socket) return alert('Socket not connected');
+    this.socket.emit('submitAnswer', {
+      roomCode: this.generatedCode,
+      username: this.username,
+      answer: index   // send index, not string
+    });
   }
 
-  copyCode() {
-    if (!this.generatedCode) return;
-    navigator.clipboard.writeText(this.generatedCode).then(() => console.log('Room code copied'));
+  nextQuestion() {
+    if (!this.questions.length) return;
+    const next = this.currentQuestionIndex + 1;
+    if (next < this.questions.length) {
+      this.currentQuestionIndex = next;
+      const q = this.questions[next];
+      this.currentQuestion = q.question;
+      this.currentOptions = q.options || [];
+      this.startTimer();
+    } else {
+      this.currentQuestion = 'Quiz finished!';
+      this.currentOptions = [];
+      this.clearTimer();
+    }
   }
 
   startTimer() {
     this.clearTimer();
+    // Timer is managed by server, just display the countdown and ensure timeout submits
     this.timerId = setInterval(() => {
-      if (this.timeLeftSeconds <= 0 && !this.hasAnswered) {
-        this.socket.emit('submitAnswer', { roomCode: this.generatedCode, username: this.username, answer: -1 });
+      if (this.timeLeftSeconds <= 0 && !this.hasAnswered && this.generatedCode) {
+        if (this.socket) {
+          this.socket.emit('submitAnswer', {
+            roomCode: this.generatedCode,
+            username: this.username,
+            answer: -1
+          });
+        }
         this.hasAnswered = true;
       }
     }, 1000);
   }
 
   clearTimer() {
-    if (this.timerId) clearInterval(this.timerId);
-    this.timerId = null;
+    if (this.timerId) {
+      clearInterval(this.timerId);
+      this.timerId = null;
+    }
   }
 
   submitScore(score: number) {
-    this.http.post(`${API_URL}/score`, { username: this.username, score }).subscribe({
-      next: (res) => console.log('score saved', res),
-      error: (err) => console.error(err)
-    });
+    // score API now points to deployed API base (portless)
+    this.http.post(`${this.API_BASE}/api/score`, { username: this.username, score })
+      .subscribe(res => console.log('score saved', res), err => console.error(err));
   }
 
   sortPlayersByScore() {
@@ -266,7 +307,7 @@ const roomSettings = {
 
   getRankText(index: number): string {
     switch (index) {
-      case 0: return '1st Place';
+      case 0: return 'WINNER';
       case 1: return '2nd Place';
       case 2: return '3rd Place';
       default: return `${index + 1}th Place`;
@@ -278,7 +319,14 @@ const roomSettings = {
   }
 
   ngOnDestroy() {
-    this.socket.disconnect();
+    if (this.socket) {
+      try {
+        this.socket.disconnect();
+      } catch (err) {
+        console.warn('Error disconnecting socket', err);
+      }
+      this.socket = null;
+    }
     this.clearTimer();
   }
 }

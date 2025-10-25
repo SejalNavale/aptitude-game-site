@@ -3,9 +3,6 @@ import { io, Socket } from 'socket.io-client';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-const socket = io('https://aptitude-game-site-backend.onrender.com', {
-  withCredentials: true
-});
 @Component({
   selector: 'app-quiz',
   standalone: true,
@@ -29,28 +26,44 @@ export class QuizComponent implements OnInit, OnDestroy {
   messages: { username: string; message: string }[] = [];
   newMessage: string = '';
 
+  // Deployed backend and frontend URLs
+  private readonly SOCKET_URL = 'https://aptitude-game-site-backend-wdo1.onrender.com';
+  private readonly FRONTEND_URL = 'https://aptitude-game-site-h2je.onrender.com';
+
   constructor(private ngZone: NgZone) {}
 
   ngOnInit(): void {
-    // ✅ Use proxy path for Socket.io connection
-    this.socket = io('https://aptitude-game-site-backend.onrender.com', {
-  withCredentials: true,
-  path: '/socket.io',      // matches your server config
-  transports: ['websocket']
-});
+    // Connect to deployed backend (supports WebSocket and fallback polling)
+    this.socket = io(this.SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true
+    });
+
+    // Handle connection errors gracefully
+    this.socket.on('connect_error', (err: any) => {
+      console.error('Socket connection failed:', err?.message || err);
+      alert('Cannot connect to quiz server. Please check your network or backend status.');
+    });
+
+    this.socket.on('connect', () => {
+      console.log('Connected to socket:', this.socket.id);
+    });
 
     // Join Room
     this.socket.emit('joinRoom', { roomCode: this.roomCode, username: this.username }, (res: any) => {
-      if (!res.success) alert(res.message);
+      if (!res.success) alert(res.message || 'Unable to join room');
     });
 
     // Quiz events
     this.socket.on('quizStarted', (data: any) => this.loadQuestion(data));
     this.socket.on('nextQuestion', (data: any) => this.loadQuestion(data));
+
     this.socket.on('quizFinished', (data: any) => {
-      this.quizEnded = true;
-      this.finalScores = data.finalScores;
-      clearInterval(this.timer);
+      this.ngZone.run(() => {
+        this.quizEnded = true;
+        this.finalScores = data.finalScores;
+        clearInterval(this.timer);
+      });
     });
 
     // Chat
@@ -62,11 +75,13 @@ export class QuizComponent implements OnInit, OnDestroy {
   }
 
   loadQuestion(data: any): void {
-    this.currentQuestion = data.question;
-    this.currentQuestionIndex = data.index;
-    this.selectedAnswer = null;
-    this.timeLeft = 30;
-    this.startTimer();
+    this.ngZone.run(() => {
+      this.currentQuestion = data.question;
+      this.currentQuestionIndex = data.index;
+      this.selectedAnswer = null;
+      this.timeLeft = 30;
+      this.startTimer();
+    });
   }
 
   chooseOption(index: number): void {
@@ -75,7 +90,7 @@ export class QuizComponent implements OnInit, OnDestroy {
     this.socket.emit('submitAnswer', {
       roomCode: this.roomCode,
       username: this.username,
-      answer: index,
+      answer: index
     });
   }
 
@@ -84,7 +99,7 @@ export class QuizComponent implements OnInit, OnDestroy {
     this.socket.emit('chatMessage', {
       roomCode: this.roomCode,
       username: this.username,
-      message: this.newMessage,
+      message: this.newMessage
     });
     this.newMessage = '';
   }
@@ -100,6 +115,12 @@ export class QuizComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearInterval(this.timer);
-    if (this.socket) this.socket.disconnect();
+    if (this.socket) {
+      try {
+        this.socket.disconnect();
+      } catch (err) {
+        console.warn('Error disconnecting socket:', err);
+      }
+    }
   }
 }
