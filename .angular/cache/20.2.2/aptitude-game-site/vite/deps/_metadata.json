@@ -1,85 +1,85 @@
 {
-  "hash": "7456fca5",
-  "configHash": "f45e24aa",
-  "lockfileHash": "92a3b84a",
-  "browserHash": "b9d60ed5",
+  "hash": "9c53a4dc",
+  "configHash": "35f56e6c",
+  "lockfileHash": "d950bfe4",
+  "browserHash": "543578be",
   "optimized": {
     "@angular/common": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/common.mjs",
       "file": "@angular_common.js",
-      "fileHash": "45a18693",
+      "fileHash": "6d2a1314",
       "needsInterop": false
     },
     "@angular/common/http": {
       "src": "../../../../../../node_modules/@angular/common/fesm2022/http.mjs",
       "file": "@angular_common_http.js",
-      "fileHash": "49015ab4",
+      "fileHash": "9e5b20b2",
       "needsInterop": false
     },
     "@angular/core": {
       "src": "../../../../../../node_modules/@angular/core/fesm2022/core.mjs",
       "file": "@angular_core.js",
-      "fileHash": "cdfcc405",
+      "fileHash": "c49e2ee0",
       "needsInterop": false
     },
     "@angular/fire/app": {
       "src": "../../../../../../node_modules/@angular/fire/fesm2022/angular-fire-app.mjs",
       "file": "@angular_fire_app.js",
-      "fileHash": "9868c54a",
+      "fileHash": "fe7d7dd2",
       "needsInterop": false
     },
     "@angular/fire/auth": {
       "src": "../../../../../../node_modules/@angular/fire/fesm2022/angular-fire-auth.mjs",
       "file": "@angular_fire_auth.js",
-      "fileHash": "a10d3306",
+      "fileHash": "47c439cd",
       "needsInterop": false
     },
     "@angular/fire/firestore": {
       "src": "../../../../../../node_modules/@angular/fire/fesm2022/angular-fire-firestore.mjs",
       "file": "@angular_fire_firestore.js",
-      "fileHash": "42303d57",
+      "fileHash": "e7add549",
       "needsInterop": false
     },
     "@angular/forms": {
       "src": "../../../../../../node_modules/@angular/forms/fesm2022/forms.mjs",
       "file": "@angular_forms.js",
-      "fileHash": "65383c1e",
+      "fileHash": "4c1a8329",
       "needsInterop": false
     },
     "@angular/platform-browser": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
       "file": "@angular_platform-browser.js",
-      "fileHash": "d9ab4961",
+      "fileHash": "399fc20f",
       "needsInterop": false
     },
     "@angular/platform-browser/animations": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/animations.mjs",
       "file": "@angular_platform-browser_animations.js",
-      "fileHash": "53c1deb1",
+      "fileHash": "ddfc5c38",
       "needsInterop": false
     },
     "@angular/router": {
       "src": "../../../../../../node_modules/@angular/router/fesm2022/router.mjs",
       "file": "@angular_router.js",
-      "fileHash": "7a211ecb",
+      "fileHash": "c67550d6",
       "needsInterop": false
     },
     "rxjs": {
       "src": "../../../../../../node_modules/rxjs/dist/esm5/index.js",
       "file": "rxjs.js",
-      "fileHash": "0ddb0624",
+      "fileHash": "6192da54",
       "needsInterop": false
     },
     "socket.io-client": {
       "src": "../../../../../../node_modules/socket.io-client/build/esm/index.js",
       "file": "socket__io-client.js",
-      "fileHash": "d0bebbff",
+      "fileHash": "65dcfa12",
       "needsInterop": false
     },
     "zone.js": {
       "src": "../../../../../../node_modules/zone.js/fesm2015/zone.js",
       "file": "zone__js.js",
-      "fileHash": "e1ed0ceb",
+      "fileHash": "fda6202c",
       "needsInterop": true
     }
   },
@@ -90,17 +90,17 @@
     "chunk-OFQKV5KN": {
       "file": "chunk-OFQKV5KN.js"
     },
-    "chunk-MVD7QBAM": {
-      "file": "chunk-MVD7QBAM.js"
-    },
-    "chunk-V6EC6RQP": {
-      "file": "chunk-V6EC6RQP.js"
+    "chunk-FVHD4LMS": {
+      "file": "chunk-FVHD4LMS.js"
     },
     "chunk-B7I72ZLE": {
       "file": "chunk-B7I72ZLE.js"
     },
     "chunk-R4PO5L4P": {
       "file": "chunk-R4PO5L4P.js"
+    },
+    "chunk-V6EC6RQP": {
+      "file": "chunk-V6EC6RQP.js"
     },
     "chunk-OUSM42MY": {
       "file": "chunk-OUSM42MY.js"

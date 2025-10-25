@@ -7,7 +7,7 @@ import { AuthService } from '../../core/auth.service';
 import { environment } from '../../../environments/environment';
 
 
-const API_URL = '/api'; // proxy-friendly
+const API_URL = environment.apiUrl; // proxy-friendly
 
 @Component({
   selector: 'app-room',
