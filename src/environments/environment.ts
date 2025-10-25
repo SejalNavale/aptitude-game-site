@@ -1,5 +1,5 @@
 export const environment = {
-  production: false,
-  apiUrl: 'https://aptitude-game-backend.onrender.com',        
-  socketUrl: 'https://aptitude-game-backend.onrender.com'      
+  production: true,
+  apiUrl: 'https://aptitude-game-site-backend.onrender.com/api',
+  socketUrl: 'https://aptitude-game-site-backend.onrender.com'
 };

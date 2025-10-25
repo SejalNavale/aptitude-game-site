@@ -3,6 +3,9 @@ import { io, Socket } from 'socket.io-client';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+const socket = io('https://aptitude-game-site-backend.onrender.com', {
+  withCredentials: true
+});
 @Component({
   selector: 'app-quiz',
   standalone: true,
@@ -30,7 +33,11 @@ export class QuizComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // ✅ Use proxy path for Socket.io connection
-    this.socket = io('/');
+    this.socket = io('https://aptitude-game-site-backend.onrender.com', {
+  withCredentials: true,
+  path: '/socket.io',      // matches your server config
+  transports: ['websocket']
+});
 
     // Join Room
     this.socket.emit('joinRoom', { roomCode: this.roomCode, username: this.username }, (res: any) => {

@@ -74,7 +74,7 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.socket = io(environment.socketUrl, {
   path: '/socket.io',
-  transports: ['polling', 'websocket'],
+  transports: ['websocket'],
   timeout: 20000,
   forceNew: true,
   reconnection: true,
@@ -82,6 +82,23 @@ export class RoomComponent implements OnInit, OnDestroy {
   reconnectionDelay: 1000
 });
 
+
+const roomSettings = {
+    challengeName: this.challengeName,
+    domain: this.domain,
+    maxPlayers: Number(this.squadSize || 10),
+    numQuestions: Number(this.numQuestions || 10),
+    timeLimit: Number(this.timeLimit || 20)
+  };
+
+  this.socket.emit('createRoom', { username: this.username, settings: roomSettings }, (res: any) => {
+    console.log('createRoom response:', res);
+    if (res?.success) {
+      this.generatedCode = res.roomCode;
+      this.isOwner = true;
+      this.settings = res.settings;
+    } else alert('Create room failed');
+  });
 
     this.socket.on('connect_error', (err: any) => {
       console.error('Socket connect_error:', err?.message || err);

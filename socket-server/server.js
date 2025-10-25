@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000;
 
 // Configure CORS for production and development
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? ['https://aptitude-game-site.onrender.com']  // your deployed frontend URL
+  ? ['https://aptitude-game-site-h2je.onrender.com']  // actual URL
   : ['http://localhost:4200'];
 
 app.use(cors({
@@ -75,9 +75,7 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? ['https://aptitude-game-site.onrender.com']  // ✅ your frontend on Render
-      : ['http://localhost:4200'],                   // ✅ local dev
+    origin: allowedOrigins,             // ✅ local dev
     methods: ['GET', 'POST', 'PUT'],
     credentials: true
   }
