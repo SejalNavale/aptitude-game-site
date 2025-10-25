@@ -33,13 +33,13 @@ export class ProfileComponent implements OnInit {
   profile: UserProfile | null = null;
   loading = true;
   error = '';
-
+  
   // Form data
   newUsername = '';
   currentPassword = '';
   newPassword = '';
   confirmPassword = '';
-
+  
   // UI states
   editingUsername = false;
   changingPassword = false;
@@ -55,8 +55,8 @@ export class ProfileComponent implements OnInit {
   loadProfile() {
     this.loading = true;
     const username = this.currentUser?.displayName || this.currentUser?.email || 'Player';
-
-    this.http.get<UserProfile>(`${BASE_URL}/api/profile/${encodeURIComponent(username)}`)
+    
+    this.http.get<UserProfile>(`http://localhost:5000/api/profile/${encodeURIComponent(username)}`)
       .subscribe({
         next: (data) => {
           this.profile = data;
@@ -89,9 +89,10 @@ export class ProfileComponent implements OnInit {
 
     this.saving = true;
     const currentUsername = this.currentUser?.displayName || this.currentUser?.email || 'Player';
-
+    
+    // Update display name in Firebase first, then reflect in backend scores
     this.auth.updateDisplayName(this.newUsername.trim())
-      .then(() => this.http.put(`${BASE_URL}/api/profile/username`, {
+      .then(() => this.http.put('http://localhost:5000/api/profile/username', {
         currentUsername,
         newUsername: this.newUsername.trim()
       }).toPromise())
@@ -175,3 +176,6 @@ export class ProfileComponent implements OnInit {
     return `#${rank}`;
   }
 }
+
+
+
