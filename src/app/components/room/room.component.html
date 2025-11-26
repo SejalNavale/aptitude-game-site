@@ -3,7 +3,7 @@
         <div class="brand">APTITUDE <span>ARENA</span></div>
         <div class="spacer"></div>
         <div class="user">👤 {{ username }}</div>
-        <button class="logout" (click)="onLogout()">Logout</button>
+        <button class="logout" (click)="onLogout()">BACK TO DASHBOARD</button>
     </header>
 
     <main>
@@ -14,17 +14,28 @@
                 <input type="text" [(ngModel)]="challengeName" placeholder="e.g. Brain Busters Arena" />
                 <label>Choose Domain</label>
                 <div class="domains">
-                    <button [class.active]="domain==='Verbal'" (click)="domain='Verbal'">Verbal</button>
-                    <button [class.active]="domain==='Logical'" (click)="domain='Logical'">Logical</button>
-                    <button [class.active]="domain==='Quant'" (click)="domain='Quant'">Quantitative Aptitude</button>
-                    <button [class.active]="domain==='Mixed'" (click)="domain='Mixed'">Mixed</button>
+                    <button [class.active]="domain==='Verbal'" (click)="selectDomain('Verbal')">Verbal Ability</button>
+                    <button [class.active]="domain==='Logical'" (click)="selectDomain('Logical')">Logical Reasoning</button>
+                    <button [class.active]="domain==='Quant'" (click)="selectDomain('Quant')">Quantitative Aptitude</button>
+                    <button [class.active]="domain==='Mixed'" (click)="selectDomain('Mixed')">Mixed</button>
+                </div>
+                <div class="timer-hint">
+                    <p>⏱ {{ currentTimerLabel }} • {{ currentTimerSeconds }}s per question</p>
+                    <small>Timer auto-submits at zero and stays synced for the entire room.</small>
+                </div>
+                <div class="timer-legend">
+                    <div class="timer-pill" *ngFor="let rule of timerRules">
+                        <span class="label">{{ rule.label }}</span>
+                        <span class="value">{{ rule.seconds }}s</span>
+                    </div>
                 </div>
                 <label>Number of Questions</label>
                 <input type="number" min="1" max="50" [(ngModel)]="numQuestions" />
                 <label>Max Players</label>
-                <input type="number" min="2" max="20" [(ngModel)]="squadSize" />
-                <label>Time Limit per Question (seconds)</label>
-                <input type="number" min="10" max="120" [(ngModel)]="timeLimit" />
+                <input type="number" [min]="minPlayersRequired" [max]="maxPlayersAllowed" [(ngModel)]="squadSize" />
+                <div class="capacity-hint">
+                    <p>🔢 {{ minPlayersRequired }} players needed to start · 👥 Max {{ maxPlayersAllowed }} per room</p>
+                </div>
                 <button class="primary" (click)="createRoom()">Create Battleground!</button>
             </div>
 
@@ -33,6 +44,10 @@
                 <p>Join with an invite code</p>
                 <input type="text" [(ngModel)]="roomCode" placeholder="Invite Code" />
                 <button class="success" (click)="joinRoom()">Join Room</button>
+                <div class="matchmaking-note">
+                    <p>Need at least {{ minPlayersRequired }} players to launch. Hosts can start early for solo practice.</p>
+                    <p>Rooms cap at {{ maxPlayersAllowed }} challengers to keep gameplay fair.</p>
+                </div>
             </div>
         </div>
 
@@ -47,15 +62,33 @@
                     <h2>🏆 {{ settings.challengeName }}</h2>
                 </div>
                 <div class="summary">
-                    <div>Players: {{ players.length }} / {{ settings.maxPlayers || squadSize }}</div>
-                    <div>Questions: {{ settings.numQuestions }}</div>
-                    <div>Category: {{ settings.domain }}</div>
-                    <div>Time Limit: {{ settings.timeLimit }}s</div>
+                    <div class="summary-item">
+                        <span class="label">Players</span>
+                        <span class="value">{{ players.length }} / {{ settings.maxPlayers || maxPlayersAllowed }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Questions</span>
+                        <span class="value">{{ settings.numQuestions }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Category</span>
+                        <span class="value">{{ settings.domain }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Timer</span>
+                        <span class="value">{{ currentTimerLabel }} • {{ currentTimerSeconds }}s</span>
+                    </div>
                 </div>
                 <div class="owner-controls" *ngIf="isOwner && !quizStarted">
-                    <button class="accent" (click)="startQuiz()" [disabled]="players.length < 1">Start Quiz!</button>
+                    <button class="accent" (click)="startQuiz()" [disabled]="players.length === 0">Start Quiz!</button>
+                    <small>Need {{ minPlayersRequired }}+ players to auto-launch. You can force start for warmups.</small>
                 </div>
             </header>
+            <div class="capacity-strip">
+                <span>Minimum to start: {{ minPlayersRequired }} players</span>
+                <span>Maximum allowed: {{ settings.maxPlayers || maxPlayersAllowed }}</span>
+                <span>Timer is server-synced—auto-submits at zero.</span>
+            </div>
 
             <main class="game-layout">
                 <aside class="players">
@@ -76,8 +109,12 @@
                     <div *ngIf="quizStarted && !showFinalResults" class="qcard">
                         <div class="q-meta">
                             <div>Q {{ currentQuestionIndex + 1 }} / {{ settings.numQuestions }}</div>
-                            <div class="timer" [class.warning]="timeLeftSeconds <= 10">⏱ {{ timeLeftSeconds }}s</div>
+                            <div class="timer" [class.warning]="timeLeftSeconds <= 10">
+                                <span class="timer-label">{{ currentQuestionTimerLabel || currentTimerLabel }}</span>
+                                <span class="timer-value">{{ timeLeftSeconds }}s</span>
+                            </div>
                         </div>
+                        <p class="timer-note">⏱ No response when the timer expires? We mark “No Answer” and advance automatically.</p>
                         <h2 class="q">{{ currentQuestion }}</h2>
                         <div class="opts">
                             <button *ngFor="let opt of currentOptions; let i = index" (click)="chooseOption(opt)" [disabled]="hasAnswered" [class.answered]="hasAnswered" [class.selected]="currentAnswers[username] === i">
@@ -101,16 +138,23 @@
                             <h1>🎉 Quiz Complete!</h1>
                             <p>Final Rankings</p>
                         </div>
-                        <div class="podium">
-                            <div *ngFor="let player of players; let i = index" class="podium-item" [class.rank-1]="i === 0" [class.rank-2]="i === 1" [class.rank-3]="i === 2">
+                        <div class="podium-grid">
+                            <div *ngFor="let player of topThreePlayers; let i = index" class="rank-card" [class.rank-1]="i === 0" [class.rank-2]="i === 1" [class.rank-3]="i === 2">
                                 <div class="rank-badge">{{ getRankIcon(i) }}</div>
                                 <div class="player-info">
                                     <h3>{{ getRankText(i) }}</h3>
-                                    <p class="player-name">{{ player.username }}</p>
-                                    <p class="final-score">{{ player.score || 0 }} points</p>
+                                    <p class="player-name">{{ player?.username || '—' }}</p>
+                                    <p class="final-score">{{ player?.score || 0 }} pts</p>
                                 </div>
                             </div>
                         </div>
+                        <ul class="rest-list" *ngIf="remainingPlayers.length">
+                            <li *ngFor="let player of remainingPlayers; let idx = index">
+                                <span class="rank-order">{{ idx + 4 }}.</span>
+                                <span class="name">{{ player.username }}</span>
+                                <span class="score">{{ player.score || 0 }} pts</span>
+                            </li>
+                        </ul>
                         <div class="results-footer">
                             <p>🏆 Congratulations to all participants!</p>
                             <button class="play-again" (click)="showFinalResults = false">Play Again</button>

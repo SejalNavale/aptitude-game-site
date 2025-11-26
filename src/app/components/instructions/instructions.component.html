@@ -1,0 +1,74 @@
+<div class="instructions-shell">
+  <section class="hero">
+    <h1>Quiz Briefing</h1>
+    <p>
+      Read these quick rules before you enter the lobby. Everything below keeps multiplayer matches fair and
+      perfectly synced.
+    </p>
+  </section>
+
+  <section class="card-grid">
+    <article class="info-card">
+      <h2>How to Create a Room</h2>
+      <ol>
+        <li *ngFor="let step of createSteps">{{ step }}</li>
+      </ol>
+    </article>
+    <article class="info-card">
+      <h2>How to Join a Room</h2>
+      <ol>
+        <li *ngFor="let step of joinSteps">{{ step }}</li>
+      </ol>
+    </article>
+  </section>
+
+  <section class="info-card wide">
+    <h2>Matchmaking & Lobby Flow</h2>
+    <ul>
+      <li *ngFor="let note of matchmakingNotes">{{ note }}</li>
+    </ul>
+  </section>
+
+  <section class="info-card wide">
+    <h2>Answering Rules</h2>
+    <ul>
+      <li *ngFor="let rule of answeringRules">{{ rule }}</li>
+    </ul>
+  </section>
+
+  <section class="info-card wide timer-card">
+    <h2>Timer Logic Per Category</h2>
+    <p>The timer starts when the question appears and is synchronized for every player in the room.</p>
+    <div class="timer-grid">
+      <div class="timer-pill" *ngFor="let rule of timerRules">
+        <div class="timer-pill__label">{{ rule.label }}</div>
+        <div class="timer-pill__value">{{ rule.seconds }} seconds/question</div>
+        <p>{{ rule.description }}</p>
+      </div>
+    </div>
+    <small>Timers are enforced on the server—when it hits zero, we auto-submit and move on.</small>
+  </section>
+
+  <section class="card-grid capacity-grid">
+    <article class="info-card capacity">
+      <h2>Minimum Players</h2>
+      <p>You need at least {{ minPlayers }} players to start a multiplayer quiz.</p>
+      <small>Hosts can start early to practice solo, but the lobby reminds everyone about the minimum.</small>
+    </article>
+    <article class="info-card capacity">
+      <h2>Maximum Players</h2>
+      <p>Each room supports up to {{ maxPlayers }} challengers.</p>
+      <small>The creator can choose a lower cap, but never above {{ maxPlayers }}.</small>
+    </article>
+    <article class="info-card capacity">
+      <h2>Room Creation Limit</h2>
+      <p>Each user can host one active room at a time.</p>
+      <small>Finish or close a room to free yourself to host a new challenge.</small>
+    </article>
+  </section>
+
+  <section class="cta">
+    <button class="continue-btn" (click)="continueToRoom()">Continue</button>
+  </section>
+</div>
+

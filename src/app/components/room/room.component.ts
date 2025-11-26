@@ -4,6 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { io, Socket } from 'socket.io-client';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
+import {
+  CATEGORY_TIMER_RULES,
+  MIN_ROOM_PLAYERS,
+  MAX_ROOM_PLAYERS,
+  getTimerLabelForDomain,
+  getTimerSecondsForDomain,
+} from '../../core/game-config';
+
+type DomainOption = 'Verbal' | 'Logical' | 'Quant' | 'Mixed';
 
 @Component({
   selector: 'app-room',
@@ -16,36 +25,46 @@ export class RoomComponent implements OnInit, OnDestroy {
   socket!: Socket | null;
 
   private auth = inject(AuthService);
+
+  readonly timerRules = CATEGORY_TIMER_RULES;
+  readonly minPlayersRequired = MIN_ROOM_PLAYERS;
+  readonly maxPlayersAllowed = MAX_ROOM_PLAYERS;
+
   username = '';
-  roomCode: string = '';
+  roomCode = '';
   generatedCode: string | null = null;
   isOwner = false;
   quizStarted = false;
+  challengeName = '';
+  domain: DomainOption = 'Mixed';
+  squadSize = 10;
+  numQuestions = 10;
+
   currentQuestion = '';
   currentOptions: string[] = [];
   currentQuestionIndex = 0;
+  currentQuestionTimerLabel = '';
+  currentTimerLabel = getTimerLabelForDomain(this.domain);
+  currentTimerSeconds = getTimerSecondsForDomain(this.domain);
   timeLeftSeconds = 0;
   timerId: any = null;
-  // Game configuration
-  challengeName: string = '';
-  domain: 'Verbal' | 'Logical' | 'Quant' | 'Mixed' = 'Mixed';
-  squadSize: number = 10;
-  numQuestions: number = 10;
-  timeLimit: number = 20;
+
   settings: any = {
     challengeName: '',
-    domain: 'Mixed',
-    maxPlayers: 10,
-    numQuestions: 10,
-    timeLimit: 20
+    domain: this.domain,
+    maxPlayers: this.squadSize,
+    numQuestions: this.numQuestions,
+    timeLimit: this.currentTimerSeconds,
   };
   players: any[] = [];
+  topThreePlayers: any[] = [];
+  remainingPlayers: any[] = [];
   chat: string[] = [];
-  newMessage: string = '';
+  newMessage = '';
   questions: any[] = [];
   hasAnswered = false;
   waitingForOthers = false;
-  currentAnswers: any = {};
+  currentAnswers: Record<string, number> = {};
   showFinalResults = false;
 
   // Replace localhost with your deployed backend
@@ -57,16 +76,19 @@ export class RoomComponent implements OnInit, OnDestroy {
   ngOnInit() {
     const u = this.auth.currentUser;
     this.username = (u?.displayName || u?.email || 'Player') as string;
+    this.syncTimerMeta(this.domain);
 
     // Load saved defaults for quiz settings
     this.http.get<any>(`${this.API_BASE}/api/settings/${encodeURIComponent(this.username)}`)
       .subscribe({
         next: (s) => {
           if (s) {
-            this.domain = s.defaultDomain || this.domain;
+            this.domain = (s.defaultDomain as DomainOption) || this.domain;
             this.numQuestions = Number(s.defaultQuestions || this.numQuestions);
-            this.timeLimit = Number(s.defaultTimeLimit || this.timeLimit);
-            this.squadSize = Number((s.maxPlayers || this.squadSize));
+            this.squadSize = this.clampSquadSize(Number(s.maxPlayers || this.squadSize));
+            this.syncTimerMeta(this.domain);
+            this.settings.maxPlayers = this.squadSize;
+            this.settings.numQuestions = this.numQuestions;
           }
         },
         error: (err) => {
@@ -92,9 +114,9 @@ export class RoomComponent implements OnInit, OnDestroy {
 
     this.socket.on('roomUpdate', (room: any) => {
       this.players = room.players || [];
-      this.settings = room.settings || this.settings;
+      this.mergeSettingsFromServer(room.settings);
       if (room.maxPlayers) {
-        this.settings.maxPlayers = room.maxPlayers;
+        this.settings.maxPlayers = this.clampSquadSize(room.maxPlayers);
       }
       this.generatedCode = room.roomCode || this.generatedCode;
       this.sortPlayersByScore();
@@ -106,9 +128,11 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.currentQuestionIndex = data.currentQuestionIndex || 0;
       this.currentQuestion = data.currentQuestion;
       this.currentOptions = data.currentOptions || [];
+      this.currentAnswers = {};
       this.hasAnswered = false;
       this.waitingForOthers = false;
-      this.timeLeftSeconds = data.timeLimit || 20;
+      this.currentQuestionTimerLabel = data.timerLabel || this.currentTimerLabel;
+      this.timeLeftSeconds = data.timeLimit || this.currentTimerSeconds;
       if (data.numQuestions) {
         this.settings.numQuestions = data.numQuestions;
       }
@@ -134,6 +158,9 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.players = data.players;
       this.hasAnswered = false;
       this.waitingForOthers = false;
+      this.currentQuestionTimerLabel = '';
+      this.timeLeftSeconds = 0;
+      this.currentAnswers = {};
       this.sortPlayersByScore();
     });
 
@@ -142,6 +169,8 @@ export class RoomComponent implements OnInit, OnDestroy {
       this.players = data.finalScores || [];
       this.sortPlayersByScore();
       this.showFinalResults = true;
+      this.currentQuestionTimerLabel = '';
+      this.currentAnswers = {};
       this.clearTimer();
       console.log('Final scores:', data.finalScores);
     });
@@ -156,24 +185,30 @@ export class RoomComponent implements OnInit, OnDestroy {
     this.socket.on('chatMessage', (msg: string) => {
       this.chat.push(msg);
     });
+
+    this.socket.on('roomError', (message: string) => {
+      alert(message);
+    });
   }
 
   createRoom() {
+    const cappedPlayers = this.clampSquadSize(this.squadSize);
+    const timerForDomain = getTimerSecondsForDomain(this.domain);
     this.settings = {
       challengeName: this.challengeName,
       domain: this.domain,
-      maxPlayers: Number(this.squadSize || 10),
+      maxPlayers: cappedPlayers,
       numQuestions: Number(this.numQuestions || 10),
-      timeLimit: Number(this.timeLimit || 20)
+      timeLimit: timerForDomain,
     };
     if (!this.socket) return alert('Socket not connected');
     this.socket.emit('createRoom', { username: this.username, settings: this.settings }, (res: any) => {
       if (res?.success) {
         this.generatedCode = res.roomCode;
         this.isOwner = true;
-        this.settings = res.settings;
+        this.mergeSettingsFromServer(res.settings);
       } else {
-        alert('Create room failed');
+        alert(res?.message || 'Create room failed');
       }
     });
   }
@@ -185,6 +220,7 @@ export class RoomComponent implements OnInit, OnDestroy {
       if (res?.success) {
         this.generatedCode = res.roomCode;
         this.isOwner = (res.roomOwner === this.username) || this.isOwner;
+        this.mergeSettingsFromServer(res.settings);
       } else {
         alert(res?.message || 'Join failed');
       }
@@ -200,7 +236,16 @@ export class RoomComponent implements OnInit, OnDestroy {
   startQuiz() {
     if (!this.isOwner || !this.generatedCode) return;
     if (!this.socket) return alert('Socket not connected');
-    this.socket.emit('startQuiz', { roomCode: this.generatedCode, username: this.username });
+    const canStart = this.players.length >= this.minPlayersRequired;
+    let forceEarlyStart = false;
+    if (!canStart) {
+      const confirmStart = confirm(`Only ${this.players.length} player(s) in the room. Start anyway?`);
+      if (!confirmStart) {
+        return;
+      }
+      forceEarlyStart = true;
+    }
+    this.socket.emit('startQuiz', { roomCode: this.generatedCode, username: this.username, forceEarlyStart });
   }
 
   sendMessage() {
@@ -275,6 +320,7 @@ export class RoomComponent implements OnInit, OnDestroy {
           });
         }
         this.hasAnswered = true;
+        this.waitingForOthers = true;
       }
     }, 1000);
   }
@@ -294,6 +340,42 @@ export class RoomComponent implements OnInit, OnDestroy {
 
   sortPlayersByScore() {
     this.players.sort((a, b) => (b.score || 0) - (a.score || 0));
+    this.topThreePlayers = this.players.slice(0, 3);
+    this.remainingPlayers = this.players.slice(3);
+  }
+
+  selectDomain(domain: DomainOption) {
+    this.domain = domain;
+    this.settings.domain = domain;
+    this.syncTimerMeta(domain);
+  }
+
+  private clampSquadSize(size: number): number {
+    const numeric = Number(size);
+    if (!Number.isFinite(numeric)) {
+      return this.maxPlayersAllowed;
+    }
+    return Math.min(this.maxPlayersAllowed, Math.max(this.minPlayersRequired, Math.round(numeric)));
+  }
+
+  private syncTimerMeta(domain: DomainOption) {
+    this.currentTimerLabel = getTimerLabelForDomain(domain);
+    this.currentTimerSeconds = getTimerSecondsForDomain(domain);
+  }
+
+  private mergeSettingsFromServer(payload?: any) {
+    if (!payload) {
+      return;
+    }
+    this.settings = {
+      ...this.settings,
+      ...payload,
+    };
+    this.settings.maxPlayers = this.clampSquadSize(this.settings.maxPlayers || this.maxPlayersAllowed);
+    this.domain = (this.settings.domain as DomainOption) || this.domain;
+    this.squadSize = this.settings.maxPlayers;
+    this.numQuestions = this.settings.numQuestions || this.numQuestions;
+    this.syncTimerMeta(this.domain);
   }
 
   getRankIcon(index: number): string {

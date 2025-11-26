@@ -88,7 +88,42 @@ const UserSettings = mongoose.model("UserSettings", settingsSchema);
 // -------------------- Quiz Settings --------------------
 const DEFAULT_QUESTION_TIME = 20;
 const REVEAL_TIME = 3000;
+const MIN_ROOM_PLAYERS = Number(process.env.MIN_ROOM_PLAYERS || 2);
+const MAX_ROOM_PLAYERS = Number(process.env.MAX_ROOM_PLAYERS || 15);
+const CATEGORY_TIMER_RULES = {
+    verbal: { label: "Verbal Ability", seconds: 30 },
+    logical: { label: "Logical Reasoning", seconds: 60 },
+    quant: { label: "Quantitative Aptitude", seconds: 90 },
+};
+const DEFAULT_TIMER_RULE = { label: "Mixed Mode", seconds: 60 };
 let rooms = {};
+
+function normalizeDomainLabel(raw = "") {
+    const value = (raw || "").toString().toLowerCase();
+    if (value.includes("verbal")) return "verbal";
+    if (value.includes("logic")) return "logical";
+    if (value.includes("quant")) return "quant";
+    if (value.includes("mix")) return "mixed";
+    return value;
+}
+
+function clampPlayerCount(value = MAX_ROOM_PLAYERS) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return MAX_ROOM_PLAYERS;
+    }
+    return Math.min(MAX_ROOM_PLAYERS, Math.max(MIN_ROOM_PLAYERS, Math.round(numeric)));
+}
+
+function resolveTimerRuleForRoom(roomDomain, questionDomain) {
+    const roomLabel = normalizeDomainLabel(roomDomain);
+    const domainToUse = roomLabel === "mixed" ? normalizeDomainLabel(questionDomain) : roomLabel;
+    return CATEGORY_TIMER_RULES[domainToUse] || DEFAULT_TIMER_RULE;
+}
+
+function findRoomByOwner(ownerName) {
+    return Object.values(rooms).find((room) => room.owner === ownerName);
+}
 
 // -------------------- Socket.io --------------------
 io.on("connection", (socket) => {
@@ -97,10 +132,19 @@ io.on("connection", (socket) => {
     // ---- Create Room ----
     socket.on("createRoom", async({ username, settings }, callback) => {
         try {
+            const existingRoom = findRoomByOwner(username);
+            if (existingRoom) {
+                return callback?.({
+                    success: false,
+                    message: `You already host room ${existingRoom.roomCode}. Finish or close it before creating a new one.`,
+                });
+            }
+
             const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
 
             let questions = [];
-            const maxQuestions = Math.min(settings.numQuestions, 50);
+            const requestedQuestions = Number(settings.numQuestions) || 10;
+            const maxQuestions = Math.min(requestedQuestions, 50);
 
             console.log(`🎯 Fetching ${maxQuestions} questions for domain: ${settings.domain}`);
 
@@ -116,6 +160,10 @@ io.on("connection", (socket) => {
 
             console.log(`📚 Found ${questions.length} questions in database`);
 
+            const normalizedDomain = settings.domain || "Mixed";
+            const maxPlayers = clampPlayerCount(settings.maxPlayers);
+            const timerRule = resolveTimerRuleForRoom(normalizedDomain);
+
             rooms[roomCode] = {
                 roomCode,
                 owner: username,
@@ -124,17 +172,20 @@ io.on("connection", (socket) => {
                 questions,
                 settings: {
                     ...settings,
+                    domain: normalizedDomain,
+                    maxPlayers,
                     numQuestions: questions.length,
-                    timeLimit: settings.timeLimit || DEFAULT_QUESTION_TIME,
+                    timeLimit: timerRule.seconds,
                 },
-                timeLeft: settings.timeLimit || DEFAULT_QUESTION_TIME,
+                timeLeft: timerRule.seconds,
                 timerInterval: null,
                 timerTimeout: null,
                 isStarted: false,
+                currentTimerLabel: timerRule.label,
             };
 
             socket.join(roomCode);
-            callback?.({ success: true, roomCode, settings: rooms[roomCode].settings });
+            callback?.({ success: true, roomCode, settings: rooms[roomCode].settings, roomOwner: username });
             io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
             console.log(`🎮 Room ${roomCode} created by ${username}`);
         } catch (err) {
@@ -150,17 +201,28 @@ io.on("connection", (socket) => {
         if (room.players.find((p) => p.username === username)) {
             return callback?.({ success: false, message: "Username taken" });
         }
+        if (room.players.length >= room.settings.maxPlayers) {
+            return callback?.({
+                success: false,
+                message: `Room is full (${room.settings.maxPlayers} players max)`,
+            });
+        }
 
         room.players.push({ username, score: 0, answer: null });
         socket.join(roomCode);
-        callback?.({ success: true, roomCode, settings: room.settings });
+        callback?.({ success: true, roomCode, settings: room.settings, roomOwner: room.owner });
         io.to(roomCode).emit("roomUpdate", room);
     });
 
     // ---- Start Quiz ----
-    socket.on("startQuiz", ({ roomCode, username }) => {
+    socket.on("startQuiz", ({ roomCode, username, forceEarlyStart }) => {
         const room = rooms[roomCode];
         if (!room || room.owner !== username) return;
+        const enoughPlayers = room.players.length >= MIN_ROOM_PLAYERS;
+        if (!enoughPlayers && !forceEarlyStart) {
+            io.to(socket.id).emit("roomError", `Need at least ${MIN_ROOM_PLAYERS} players to start the quiz.`);
+            return;
+        }
         room.currentIndex = 0;
         room.isStarted = true;
         sendQuestion(roomCode);
@@ -217,8 +279,15 @@ function sendQuestion(roomCode) {
     if (!room) return;
 
     const q = room.questions[room.currentIndex];
+    if (!q) {
+        io.to(roomCode).emit("roomError", "No questions available for this quiz.");
+        return;
+    }
     room.players.forEach((p) => (p.answer = null));
-    room.timeLeft = room.settings.timeLimit;
+    const timerRule = resolveTimerRuleForRoom(room.settings.domain, q.domain);
+    room.settings.timeLimit = timerRule.seconds;
+    room.currentTimerLabel = timerRule.label;
+    room.timeLeft = timerRule.seconds;
 
     io.to(roomCode).emit("quizStarted", {
         currentQuestionIndex: room.currentIndex,
@@ -227,6 +296,7 @@ function sendQuestion(roomCode) {
         numQuestions: room.settings.numQuestions,
         players: room.players,
         timeLimit: room.settings.timeLimit,
+        timerLabel: timerRule.label,
     });
 
     clearInterval(room.timerInterval);
@@ -234,6 +304,9 @@ function sendQuestion(roomCode) {
 
     room.timerInterval = setInterval(() => {
         room.timeLeft--;
+        if (room.timeLeft < 0) {
+            room.timeLeft = 0;
+        }
         io.to(roomCode).emit("timer", room.timeLeft);
     }, 1000);
 

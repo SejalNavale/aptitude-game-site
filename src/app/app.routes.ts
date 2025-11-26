@@ -7,12 +7,14 @@ import { LeaderboardComponent } from './components/leaderboard/leaderboard.compo
 import { ProfileComponent } from './components/profile/profile.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { authGuard } from './core/auth.guard';
+import { InstructionsComponent } from './components/instructions/instructions.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'splash', pathMatch: 'full' },
   { path: 'splash', component: SplashComponent },
   { path: 'auth', component: AuthComponent },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'quiz/instructions', component: InstructionsComponent, canActivate: [authGuard] },
   { path: 'quiz/room', component: RoomComponent, canActivate: [authGuard] },
   { path: 'room', component: RoomComponent, canActivate: [authGuard] },
   { path: 'leaderboard', component: LeaderboardComponent, canActivate: [authGuard] },

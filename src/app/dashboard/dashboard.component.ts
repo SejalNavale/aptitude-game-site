@@ -27,7 +27,7 @@ export class DashboardComponent {
   open(section: string) {
     switch (section) {
       case 'quiz':
-        this.router.navigate(['/quiz/room']);
+        this.router.navigate(['/quiz/instructions']);
         break;
       case 'leaderboard':
         this.router.navigate(['/leaderboard']);
